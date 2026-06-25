@@ -5,7 +5,28 @@ import { PortService } from '../bindings/github.com/Sxuan-Coder/PortCheck'
 import type { PortEntry, PortListResult } from '../bindings/github.com/Sxuan-Coder/PortCheck/models'
 
 type Protocol = 'ALL' | 'TCP' | 'UDP'
-type PortRow = PortEntry & { _id: number }
+type ProcessType = 'all' | 'node' | 'java' | 'go' | 'csharp' | 'other'
+type PortRow = PortEntry & { _id: number; _type: ProcessType }
+
+// 进程类型识别（启发式：进程名 + 路径关键词；Go/C# 编译产物无法 100% 识别，归为其他）
+function classifyProcess(name: string, path: string): ProcessType {
+  const base = (name || '').toLowerCase().replace(/\.(exe|com)$/, '')
+  const p = (path || '').toLowerCase()
+  if (['node', 'npm', 'npx', 'pnpm', 'yarn', 'bun'].includes(base) || p.includes('nodejs') || p.includes('node_modules') || p.includes('nvm')) return 'node'
+  if (['java', 'javaw'].includes(base) || p.includes('\\jre') || p.includes('\\jdk') || p.includes('/jre') || p.includes('/jdk')) return 'java'
+  if (base === 'go' || p.includes('\\go\\bin') || p.includes('/go/bin') || p.includes('go-build')) return 'go'
+  if (base === 'dotnet' || p.includes('\\dotnet') || p.includes('/dotnet')) return 'csharp'
+  return 'other'
+}
+
+const PROCESS_TYPE_LABELS: { value: ProcessType; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'node', label: 'Node.js' },
+  { value: 'java', label: 'Java' },
+  { value: 'go', label: 'Go' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'other', label: '其他' },
+]
 
 // 分页：每页 100 条，避免万级数据一次性撑爆 DOM
 const PAGE_SIZE = 100
@@ -28,6 +49,7 @@ const query = ref('')
 const debouncedQuery = ref('')
 const protocolFilter = ref<Protocol>('ALL')
 const stateFilter = ref('ALL')
+const processTypeFilter = ref<ProcessType>('all')
 
 // 搜索防抖：避免每次按键都触发全量重算 + DOM 重建
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -45,6 +67,7 @@ const filteredPorts = computed(() => {
   const keyword = debouncedQuery.value
 
   return ports.value.filter((item) => {
+    if (processTypeFilter.value !== 'all' && item._type !== processTypeFilter.value) return false
     if (protocolFilter.value !== 'ALL' && item.protocol !== protocolFilter.value) return false
     if (stateFilter.value !== 'ALL' && item.state !== stateFilter.value) return false
     if (!keyword) return true
@@ -77,6 +100,15 @@ function goToPage(page: number) {
 // 搜索/筛选/刷新后数据集变化，回到第 1 页
 watch(filteredPorts, () => {
   currentPage.value = 1
+})
+
+const processTypeCounts = computed(() => {
+  const counts: Record<ProcessType, number> = { all: 0, node: 0, java: 0, go: 0, csharp: 0, other: 0 }
+  for (const item of ports.value) {
+    counts.all++
+    counts[item._type]++
+  }
+  return counts
 })
 
 const stateOptions = computed(() => {
@@ -114,7 +146,11 @@ async function refreshPorts(clearNotice = true) {
 
   try {
     const result = await PortService.ListPorts()
-    ports.value = result.ports.map((port, index) => ({ ...port, _id: index }))
+    ports.value = result.ports.map((port, index) => ({
+      ...port,
+      _id: index,
+      _type: classifyProcess(port.process, port.path),
+    }))
     stats.value = result
     lastUpdated.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   } catch (err) {
@@ -200,6 +236,21 @@ onMounted(refreshPorts)
         <span class="stat-label">进程</span>
         <strong class="stat-value">{{ formatNumber(stats.processCount) }}</strong>
       </article>
+    </section>
+
+    <section class="type-filter reveal" aria-label="进程类型筛选">
+      <span class="type-filter-label">类型</span>
+      <button
+        v-for="t in PROCESS_TYPE_LABELS"
+        :key="t.value"
+        type="button"
+        class="type-chip"
+        :class="[{ active: processTypeFilter === t.value }, t.value]"
+        @click="processTypeFilter = t.value"
+      >
+        {{ t.label }}
+        <span class="type-chip-count">{{ formatNumber(processTypeCounts[t.value]) }}</span>
+      </button>
     </section>
 
     <section class="toolbar glass reveal" aria-label="筛选端口">
@@ -614,6 +665,68 @@ h1 {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+/* ============ 进程类型筛选条 ============ */
+.type-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-hairline);
+  box-shadow: var(--shadow-sm);
+}
+
+.type-filter-label {
+  margin-right: 4px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.type-chip:hover {
+  border-color: rgba(0, 122, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.type-chip.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.type-chip-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+
+.type-chip.active .type-chip-count {
+  opacity: 1;
 }
 
 /* ============ 工具栏 ============ */
