@@ -28,6 +28,13 @@ const PROCESS_TYPE_LABELS: { value: ProcessType; label: string }[] = [
   { value: 'other', label: '其他' },
 ]
 
+// 常用端口快捷筛选（点击 = 搜索该端口号）
+const COMMON_PORTS = [3000, 5173, 8000, 8080, 4200, 3001, 8888, 9000]
+
+function toggleShortcutPort(port: number) {
+  query.value = query.value === String(port) ? '' : String(port)
+}
+
 // 分页：每页 100 条，避免万级数据一次性撑爆 DOM
 const PAGE_SIZE = 100
 const currentPage = ref(1)
@@ -251,6 +258,18 @@ onMounted(refreshPorts)
         {{ t.label }}
         <span class="type-chip-count">{{ formatNumber(processTypeCounts[t.value]) }}</span>
       </button>
+    </section>
+
+    <section class="port-shortcuts reveal" aria-label="常用端口">
+      <span class="type-filter-label">常用</span>
+      <button
+        v-for="port in COMMON_PORTS"
+        :key="port"
+        type="button"
+        class="port-chip"
+        :class="{ active: query === String(port) }"
+        @click="toggleShortcutPort(port)"
+      >{{ port }}</button>
     </section>
 
     <section class="toolbar glass reveal" aria-label="筛选端口">
@@ -729,6 +748,47 @@ h1 {
   opacity: 1;
 }
 
+/* ============ 常用端口快捷筛选 ============ */
+.port-shortcuts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--glass-hairline);
+  box-shadow: var(--shadow-sm);
+}
+
+.port-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.port-chip:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.port-chip.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #fff;
+}
+
 /* ============ 工具栏 ============ */
 .toolbar {
   display: grid;
@@ -775,8 +835,26 @@ input:focus,
 select:focus {
   outline: none;
   border-color: var(--blue);
-  background: #fff;
+  background-color: #fff;
   box-shadow: 0 0 0 4px var(--blue-soft);
+}
+
+/* select：移除原生外观，自定义蓝色 chevron 箭头 */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23007aff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px;
+}
+
+select option {
+  background: #ffffff;
+  color: var(--text-1);
 }
 
 .count-text {
