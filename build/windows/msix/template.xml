@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="wails-code-lines-demo.exe"
+        Arguments=""
+        InstallLocation="C:\Program Files\My Company\Wails Code Lines Demo">
+    </Installer>
+    <PackageInformation
+        PackageName="Wails Code Lines Demo"
+        PackageDisplayName="Wails Code Lines Demo"
+        PublisherName="CN=My Company"
+        PublisherDisplayName="My Company"
+        Version="0.1.0.0"
+        PackageDescription="Code line counter built with Wails">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="com.fengfeng.wailscodelines"
+                Description="Code line counter built with Wails"
+                DisplayName="Wails Code Lines Demo"
+                ExecutableName="wails-code-lines-demo.exe"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>Wails Code Lines Demo</DisplayName>
+            <PublisherDisplayName>My Company</PublisherDisplayName>
+            <Description>Code line counter built with Wails</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="wails-code-lines-demo.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

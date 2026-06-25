@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Wails Code Lines Demo
+Comment=Code line counter built with Wails
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/wails-code-lines-demo.exe %u
+Terminal=false
+Type=Application
+Icon=wails-code-lines-demo.exe
+Categories=Utility;
+StartupWMClass=wails-code-lines-demo.exe
+
+ 
