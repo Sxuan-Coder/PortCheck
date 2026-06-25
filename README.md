@@ -1,12 +1,10 @@
 # PortCheck
 
-PortCheck 是一个用 Wails v3 写的 Windows 本地端口查看器。
+PortCheck 是一个Windows 本地端口查看器。
 
 它的目标很简单：当本地服务启动失败、提示端口被占用时，不用再来回敲 `netstat`、`findstr`、`tasklist`，直接打开一个小窗口看清楚端口被哪个进程占了。
 
-这个项目也是公众号文章的配套源码：
-
-> 本地服务端口被谁占了？我用 Wails 做了个 Windows 端口查看器
+> 本地服务端口被谁占了？Codex或者cc帮你开了一堆后台开发服务器没关？一键结束nodejs、Java、Go进程。
 
 ## 功能
 
@@ -19,7 +17,7 @@ PortCheck 是一个用 Wails v3 写的 Windows 本地端口查看器。
 
 ## 截图
 
-后续文章发布时会补充运行截图。当前代码可以直接本地运行。
+
 
 ## 安全说明
 
@@ -88,21 +86,6 @@ go test ./...
 
 这里先构建前端，是因为 Go 入口里会通过 `embed` 打包 `frontend/dist`。
 
-## 当前实测环境
-
-以下结果来自我的 Windows 环境，只代表当前 Demo 和当前打包配置。
-
-| 项目 | 版本 / 数据 |
-|---|---|
-| 操作系统 | Windows 11 Home Chinese, Build 26200 |
-| CPU | AMD Ryzen 7 8745H |
-| Go | go1.25.0 windows/amd64 |
-| Node.js | v24.14.1 |
-| npm | 11.11.0 |
-| Wails | v3.0.0-alpha.78 |
-| 打包产物 | `PortCheck.exe` |
-| 产物体积 | 8.75 MB |
-
 ## 项目结构
 
 ```text
@@ -116,12 +99,6 @@ go test ./...
 └── Taskfile.yml                # Wails 任务入口
 ```
 
-## 说明
-
-这个项目是一个最小可用版本，重点是把“端口被谁占了”这件事查清楚。
-
-目前没有做后台常驻、端口变化监听、批量结束进程、导出报告这些功能。后续如果继续写文章，我会优先按真实使用场景往下加，而不是把功能一次堆满。
-
 ## 致谢
 
-本项目基于 [fengfengzhidao/port_lite](https://github.com/fengfengzhidao/port_lite) 改造而来，感谢原作者 **枫枫** 的开源贡献。
+本项目基于 [fengfengzhidao/port_lite](https://github.com/fengfengzhidao/port_lite) 升级而来，感谢原作者的开源贡献。
