@@ -5,7 +5,7 @@ import { PortService } from '../bindings/github.com/Sxuan-Coder/PortCheck'
 import type { PortEntry, PortListResult } from '../bindings/github.com/Sxuan-Coder/PortCheck/models'
 
 type Protocol = 'ALL' | 'TCP' | 'UDP'
-type ProcessType = 'all' | 'node' | 'java' | 'go' | 'csharp' | 'other'
+type ProcessType = 'all' | 'node' | 'java' | 'python' | 'go' | 'csharp' | 'other'
 type PortRow = PortEntry & { _id: number; _type: ProcessType }
 
 // 进程类型识别（启发式：进程名 + 路径关键词；Go/C# 编译产物无法 100% 识别，归为其他）
@@ -14,6 +14,7 @@ function classifyProcess(name: string, path: string): ProcessType {
   const p = (path || '').toLowerCase()
   if (['node', 'npm', 'npx', 'pnpm', 'yarn', 'bun'].includes(base) || p.includes('nodejs') || p.includes('node_modules') || p.includes('nvm')) return 'node'
   if (['java', 'javaw'].includes(base) || p.includes('\\jre') || p.includes('\\jdk') || p.includes('/jre') || p.includes('/jdk')) return 'java'
+  if (['python', 'python3', 'pythonw', 'py'].includes(base) || p.includes('\\python') || p.includes('/python') || p.includes('\\anaconda') || p.includes('\\miniconda')) return 'python'
   if (base === 'go' || p.includes('\\go\\bin') || p.includes('/go/bin') || p.includes('go-build')) return 'go'
   if (base === 'dotnet' || p.includes('\\dotnet') || p.includes('/dotnet')) return 'csharp'
   return 'other'
@@ -23,6 +24,7 @@ const PROCESS_TYPE_LABELS: { value: ProcessType; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'node', label: 'Node.js' },
   { value: 'java', label: 'Java' },
+  { value: 'python', label: 'Python' },
   { value: 'go', label: 'Go' },
   { value: 'csharp', label: 'C#' },
   { value: 'other', label: '其他' },
@@ -110,7 +112,7 @@ watch(filteredPorts, () => {
 })
 
 const processTypeCounts = computed(() => {
-  const counts: Record<ProcessType, number> = { all: 0, node: 0, java: 0, go: 0, csharp: 0, other: 0 }
+  const counts: Record<ProcessType, number> = { all: 0, node: 0, java: 0, python: 0, go: 0, csharp: 0, other: 0 }
   for (const item of ports.value) {
     counts.all++
     counts[item._type]++
