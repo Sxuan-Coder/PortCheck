@@ -69,7 +69,17 @@ jobs:
 
       - name: Install NSIS
         shell: pwsh
-        run: choco install nsis -y --no-progress
+        run: |
+          choco install nsis -y --no-progress
+          $nsisPath = "${env:ProgramFiles(x86)}\NSIS"
+          if (!(Test-Path (Join-Path $nsisPath "makensis.exe"))) {
+            throw "makensis.exe was not found under $nsisPath"
+          }
+          $nsisPath >> $env:GITHUB_PATH
+
+      - name: Verify NSIS
+        shell: pwsh
+        run: makensis /VERSION
 
       - name: Build Windows executable
         shell: pwsh
