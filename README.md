@@ -1,10 +1,26 @@
 # PortCheck
 
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Wails](https://img.shields.io/badge/Wails-v3-E55353?logo=wails&logoColor=white)](https://v3.wails.io)
+[![Vue](https://img.shields.io/badge/Vue.js-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![下载](https://img.shields.io/badge/下载-Releases-2158FF?logo=github&logoColor=white)](https://github.com/Sxuan-Coder/PortCheck/releases/latest)
+
 PortCheck 是一个Windows 本地端口查看器。
 
 它的目标很简单：当本地服务启动失败、提示端口被占用时，不用再来回敲 `netstat`、`findstr`、`tasklist`，直接打开一个小窗口看清楚端口被哪个进程占了。
 
-> 本地服务端口被谁占了？Codex或者cc帮你开了一堆后台开发服务器没关？一键结束nodejs、Java、Go进程。
+> 本地服务端口被谁占了？Codex或者cc帮你开了一堆后台开发服务器没关？一键结束 Node.js、Java、Python、Go 进程。
+
+## 下载
+
+不用自己编译，直接到 [Releases](https://github.com/Sxuan-Coder/PortCheck/releases/latest) 下载最新版即可：
+
+- `PortCheck-<版本号>-windows-amd64-installer.exe`：NSIS 安装包（推荐，自动安装并创建快捷方式）
+- `PortCheck-<版本号>-windows-amd64.zip`：免安装压缩包，解压即用
+- `PortCheck-<版本号>-windows-amd64.exe`：单文件可执行程序
+
+> 首次运行若被 Windows SmartScreen 拦截，点击「更多信息 → 仍要运行」即可。
 
 ## 功能
 
