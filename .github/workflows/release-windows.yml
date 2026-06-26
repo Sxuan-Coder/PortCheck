@@ -98,17 +98,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
           $exe = Join-Path $PWD "bin\PortCheck.exe"
-          $installer = Join-Path $PWD "bin\PortCheck-amd64-installer.exe"
+          $installer = Get-ChildItem -Path (Join-Path $PWD "bin") -Filter "*-installer.exe" -File |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
 
           if (!(Test-Path $exe)) {
             throw "Missing executable: $exe"
           }
-          if (!(Test-Path $installer)) {
-            throw "Missing installer: $installer"
+          if (!$installer) {
+            throw "Missing installer under $(Join-Path $PWD "bin")"
           }
 
           Copy-Item $exe (Join-Path $dist "PortCheck-$version-windows-amd64.exe")
-          Copy-Item $installer (Join-Path $dist "PortCheck-$version-windows-amd64-installer.exe")
+          Copy-Item $installer.FullName (Join-Path $dist "PortCheck-$version-windows-amd64-installer.exe")
 
           Compress-Archive `
             -Path (Join-Path $dist "PortCheck-$version-windows-amd64.exe") `
