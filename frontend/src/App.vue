@@ -5,13 +5,16 @@ import { PortService } from '../bindings/github.com/Sxuan-Coder/PortCheck'
 import type { PortEntry, PortListResult } from '../bindings/github.com/Sxuan-Coder/PortCheck/models'
 
 type Protocol = 'ALL' | 'TCP' | 'UDP'
-type ProcessType = 'all' | 'node' | 'java' | 'python' | 'go' | 'csharp' | 'other'
+type ProcessType = 'all' | 'node' | 'java' | 'python' | 'go' | 'csharp' | 'ai' | 'other'
 type PortRow = PortEntry & { _id: number; _type: ProcessType }
 
 // 进程类型识别（启发式：进程名 + 路径关键词；Go/C# 编译产物无法 100% 识别，归为其他）
 function classifyProcess(name: string, path: string): ProcessType {
   const base = (name || '').toLowerCase().replace(/\.(exe|com)$/, '')
   const p = (path || '').toLowerCase()
+  // AI CLI 优先：claude.exe / codex.exe 常经 npm 全局装在 nvm\node_modules 下，
+  // 必须先按进程名判定，否则会被下面 node 的 nvm/node_modules 路径关键词误判为 node。
+  if (base === 'claude' || base === 'codex') return 'ai'
   if (['node', 'npm', 'npx', 'pnpm', 'yarn', 'bun'].includes(base) || p.includes('nodejs') || p.includes('node_modules') || p.includes('nvm')) return 'node'
   if (['java', 'javaw'].includes(base) || p.includes('\\jre') || p.includes('\\jdk') || p.includes('/jre') || p.includes('/jdk')) return 'java'
   if (['python', 'python3', 'pythonw', 'py'].includes(base) || p.includes('\\python') || p.includes('/python') || p.includes('\\anaconda') || p.includes('\\miniconda')) return 'python'
@@ -27,6 +30,7 @@ const PROCESS_TYPE_LABELS: { value: ProcessType; label: string }[] = [
   { value: 'python', label: 'Python' },
   { value: 'go', label: 'Go' },
   { value: 'csharp', label: 'C#' },
+  { value: 'ai', label: 'AI CLI' },
   { value: 'other', label: '其他' },
 ]
 
@@ -112,7 +116,7 @@ watch(filteredPorts, () => {
 })
 
 const processTypeCounts = computed(() => {
-  const counts: Record<ProcessType, number> = { all: 0, node: 0, java: 0, python: 0, go: 0, csharp: 0, other: 0 }
+  const counts: Record<ProcessType, number> = { all: 0, node: 0, java: 0, python: 0, go: 0, csharp: 0, ai: 0, other: 0 }
   for (const item of ports.value) {
     counts.all++
     counts[item._type]++
