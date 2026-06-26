@@ -1,0 +1,159 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example v1.2.3"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and publish Windows release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}"
+          }
+
+          if ($version -notmatch '^v\d+\.\d+\.\d+.*$') {
+            throw "Release version must start with vX.Y.Z, got: $version"
+          }
+
+          $displayVersion = $version.TrimStart('v')
+          "tag=$version" >> $env:GITHUB_OUTPUT
+          "display_version=$displayVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: "3.x"
+
+      - name: Install Wails v3 CLI
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          "$env:USERPROFILE\go\bin" >> $env:GITHUB_PATH
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Build Windows executable
+        shell: pwsh
+        run: wails3 task build
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: wails3 task package
+
+      - name: Stage release assets
+        id: assets
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.display_version }}"
+          $dist = Join-Path $PWD "release-assets"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          $exe = Join-Path $PWD "bin\PortCheck.exe"
+          $installer = Join-Path $PWD "bin\PortCheck-amd64-installer.exe"
+
+          if (!(Test-Path $exe)) {
+            throw "Missing executable: $exe"
+          }
+          if (!(Test-Path $installer)) {
+            throw "Missing installer: $installer"
+          }
+
+          Copy-Item $exe (Join-Path $dist "PortCheck-$version-windows-amd64.exe")
+          Copy-Item $installer (Join-Path $dist "PortCheck-$version-windows-amd64-installer.exe")
+
+          Compress-Archive `
+            -Path (Join-Path $dist "PortCheck-$version-windows-amd64.exe") `
+            -DestinationPath (Join-Path $dist "PortCheck-$version-windows-amd64.zip") `
+            -Force
+
+          "dist=$dist" >> $env:GITHUB_OUTPUT
+
+      - name: Generate release notes
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $displayVersion = "${{ steps.version.outputs.display_version }}"
+          git rev-parse --verify "$tag" *> $null
+          $tagExists = $LASTEXITCODE -eq 0
+
+          if ($tagExists) {
+            $releaseRef = $tag
+            $previousTag = git describe --tags --abbrev=0 "$tag^" 2>$null
+          } else {
+            $releaseRef = "HEAD"
+            $previousTag = git describe --tags --abbrev=0 HEAD 2>$null
+          }
+
+          if ($LASTEXITCODE -eq 0 -and $previousTag) {
+            $range = "$previousTag..$releaseRef"
+          } else {
+            $range = $releaseRef
+          }
+
+          $history = git log $range --pretty=format:"- %s (%h)"
+          if (!$history) {
+            $history = "- 暂无提交记录"
+          }
+
+          @"
+          # PortCheck V$displayVersion版本
+
+          ## 主要改动
+
+          见下方 git 历史。
+
+          ## git历史
+
+          $history
+          "@.TrimStart() | Set-Content -Encoding UTF8 release-notes.md
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: PortCheck V${{ steps.version.outputs.display_version }}版本
+          body_path: release-notes.md
+          files: |
+            release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

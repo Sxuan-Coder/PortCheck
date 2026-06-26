@@ -19,6 +19,7 @@ import (
 
 const (
 	afInet              = 2
+	afInet6             = 23
 	tcpTableOwnerPIDAll = 5
 	udpTableOwnerPID    = 1
 )
@@ -73,6 +74,24 @@ type mibUDPRowOwnerPID struct {
 	LocalAddr uint32
 	LocalPort uint32
 	OwningPID uint32
+}
+
+type mibTCP6RowOwnerPID struct {
+	LocalAddr     [16]byte
+	LocalScopeID  uint32
+	LocalPort     uint32
+	RemoteAddr    [16]byte
+	RemoteScopeID uint32
+	RemotePort    uint32
+	State         uint32
+	OwningPID     uint32
+}
+
+type mibUDP6RowOwnerPID struct {
+	LocalAddr    [16]byte
+	LocalScopeID uint32
+	LocalPort    uint32
+	OwningPID    uint32
 }
 
 func (s *PortService) ListPorts() (PortListResult, error) {
@@ -189,7 +208,24 @@ func validateKillPID(pid uint32) error {
 }
 
 func listTCPPorts() ([]PortEntry, error) {
-	buf, err := queryTable(procGetExtendedTCPTable, tcpTableOwnerPIDAll)
+	v4Rows, v4Err := listTCP4Ports()
+	v6Rows, v6Err := listTCP6Ports()
+
+	rows := append(v4Rows, v6Rows...)
+	if v4Err != nil && v6Err != nil {
+		return rows, fmt.Errorf("IPv4 TCP 读取失败：%v；IPv6 TCP 读取失败：%v", v4Err, v6Err)
+	}
+	if v4Err != nil {
+		return rows, fmt.Errorf("IPv4 TCP 读取失败：%w", v4Err)
+	}
+	if v6Err != nil {
+		return rows, fmt.Errorf("IPv6 TCP 读取失败：%w", v6Err)
+	}
+	return rows, nil
+}
+
+func listTCP4Ports() ([]PortEntry, error) {
+	buf, err := queryTable(procGetExtendedTCPTable, afInet, tcpTableOwnerPIDAll)
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +255,56 @@ func listTCPPorts() ([]PortEntry, error) {
 	return ports, nil
 }
 
+func listTCP6Ports() ([]PortEntry, error) {
+	buf, err := queryTable(procGetExtendedTCPTable, afInet6, tcpTableOwnerPIDAll)
+	if err != nil {
+		return nil, err
+	}
+
+	count := *(*uint32)(unsafe.Pointer(&buf[0]))
+	rowSize := unsafe.Sizeof(mibTCP6RowOwnerPID{})
+	ports := make([]PortEntry, 0, count)
+	processCache := map[uint32]processInfo{}
+
+	for i := uint32(0); i < count; i++ {
+		offset := uintptr(4) + uintptr(i)*rowSize
+		row := (*mibTCP6RowOwnerPID)(unsafe.Pointer(&buf[offset]))
+		info := cachedProcessInfo(processCache, row.OwningPID)
+		ports = append(ports, PortEntry{
+			Protocol:   "TCP",
+			LocalAddr:  ipv6FromBytes(row.LocalAddr),
+			LocalPort:  portFromDWORD(row.LocalPort),
+			RemoteAddr: ipv6FromBytes(row.RemoteAddr),
+			RemotePort: portFromDWORD(row.RemotePort),
+			State:      tcpStateName(row.State),
+			PID:        row.OwningPID,
+			Process:    info.name,
+			Path:       info.path,
+		})
+	}
+
+	return ports, nil
+}
+
 func listUDPPorts() ([]PortEntry, error) {
-	buf, err := queryTable(procGetExtendedUDPTable, udpTableOwnerPID)
+	v4Rows, v4Err := listUDP4Ports()
+	v6Rows, v6Err := listUDP6Ports()
+
+	rows := append(v4Rows, v6Rows...)
+	if v4Err != nil && v6Err != nil {
+		return rows, fmt.Errorf("IPv4 UDP 读取失败：%v；IPv6 UDP 读取失败：%v", v4Err, v6Err)
+	}
+	if v4Err != nil {
+		return rows, fmt.Errorf("IPv4 UDP 读取失败：%w", v4Err)
+	}
+	if v6Err != nil {
+		return rows, fmt.Errorf("IPv6 UDP 读取失败：%w", v6Err)
+	}
+	return rows, nil
+}
+
+func listUDP4Ports() ([]PortEntry, error) {
+	buf, err := queryTable(procGetExtendedUDPTable, afInet, udpTableOwnerPID)
 	if err != nil {
 		return nil, err
 	}
@@ -248,9 +332,38 @@ func listUDPPorts() ([]PortEntry, error) {
 	return ports, nil
 }
 
-func queryTable(proc *windows.LazyProc, tableClass uint32) ([]byte, error) {
+func listUDP6Ports() ([]PortEntry, error) {
+	buf, err := queryTable(procGetExtendedUDPTable, afInet6, udpTableOwnerPID)
+	if err != nil {
+		return nil, err
+	}
+
+	count := *(*uint32)(unsafe.Pointer(&buf[0]))
+	rowSize := unsafe.Sizeof(mibUDP6RowOwnerPID{})
+	ports := make([]PortEntry, 0, count)
+	processCache := map[uint32]processInfo{}
+
+	for i := uint32(0); i < count; i++ {
+		offset := uintptr(4) + uintptr(i)*rowSize
+		row := (*mibUDP6RowOwnerPID)(unsafe.Pointer(&buf[offset]))
+		info := cachedProcessInfo(processCache, row.OwningPID)
+		ports = append(ports, PortEntry{
+			Protocol:  "UDP",
+			LocalAddr: ipv6FromBytes(row.LocalAddr),
+			LocalPort: portFromDWORD(row.LocalPort),
+			State:     "-",
+			PID:       row.OwningPID,
+			Process:   info.name,
+			Path:      info.path,
+		})
+	}
+
+	return ports, nil
+}
+
+func queryTable(proc *windows.LazyProc, family uint32, tableClass uint32) ([]byte, error) {
 	var size uint32
-	r1, _, err := proc.Call(0, uintptr(unsafe.Pointer(&size)), 0, afInet, uintptr(tableClass), 0)
+	r1, _, err := proc.Call(0, uintptr(unsafe.Pointer(&size)), 0, uintptr(family), uintptr(tableClass), 0)
 	if r1 != uintptr(syscall.ERROR_INSUFFICIENT_BUFFER) && r1 != 0 {
 		return nil, windows.Errno(r1)
 	}
@@ -259,7 +372,7 @@ func queryTable(proc *windows.LazyProc, tableClass uint32) ([]byte, error) {
 	}
 
 	buf := make([]byte, size)
-	r1, _, _ = proc.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)), 0, afInet, uintptr(tableClass), 0)
+	r1, _, _ = proc.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)), 0, uintptr(family), uintptr(tableClass), 0)
 	if r1 != 0 {
 		return nil, windows.Errno(r1)
 	}
@@ -277,6 +390,10 @@ func ipv4FromDWORD(addr uint32) string {
 	}
 	bytes := (*[4]byte)(unsafe.Pointer(&addr))
 	return net.IPv4(bytes[0], bytes[1], bytes[2], bytes[3]).String()
+}
+
+func ipv6FromBytes(addr [16]byte) string {
+	return net.IP(addr[:]).String()
 }
 
 func tcpStateName(state uint32) string {

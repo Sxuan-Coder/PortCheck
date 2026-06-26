@@ -48,6 +48,27 @@ func TestListTCPPortsFindsCurrentProcessListener(t *testing.T) {
 	t.Fatalf("current TCP listener on port %d was not found", port)
 }
 
+func TestListTCPPortsFindsCurrentProcessIPv6Listener(t *testing.T) {
+	listener, err := net.Listen("tcp6", "[::1]:0")
+	if err != nil {
+		t.Skipf("IPv6 loopback is not available: %v", err)
+	}
+	defer listener.Close()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	rows, err := listTCPPorts()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, row := range rows {
+		if row.Protocol == "TCP" && row.LocalAddr == "::1" && row.LocalPort == port && row.PID == uint32(os.Getpid()) {
+			return
+		}
+	}
+	t.Fatalf("current TCP IPv6 listener on port %d was not found", port)
+}
+
 func TestListUDPPortsFindsCurrentProcessListener(t *testing.T) {
 	conn, err := net.ListenPacket("udp4", "127.0.0.1:0")
 	if err != nil {
@@ -67,6 +88,27 @@ func TestListUDPPortsFindsCurrentProcessListener(t *testing.T) {
 		}
 	}
 	t.Fatalf("current UDP listener on port %d was not found", port)
+}
+
+func TestListUDPPortsFindsCurrentProcessIPv6Listener(t *testing.T) {
+	conn, err := net.ListenPacket("udp6", "[::1]:0")
+	if err != nil {
+		t.Skipf("IPv6 loopback is not available: %v", err)
+	}
+	defer conn.Close()
+
+	port := conn.LocalAddr().(*net.UDPAddr).Port
+	rows, err := listUDPPorts()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, row := range rows {
+		if row.Protocol == "UDP" && row.LocalAddr == "::1" && row.LocalPort == port && row.PID == uint32(os.Getpid()) {
+			return
+		}
+	}
+	t.Fatalf("current UDP IPv6 listener on port %d was not found", port)
 }
 
 func TestKillProcessTerminatesChildProcess(t *testing.T) {
