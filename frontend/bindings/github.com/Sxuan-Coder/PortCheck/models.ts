@@ -212,6 +212,73 @@ export class StartupEntry {
     }
 }
 
+/**
+ * UpdateInfo 是检查更新的返回结果。
+ */
+export class UpdateInfo {
+    /**
+     * 本地版本
+     */
+    "currentVersion": string;
+
+    /**
+     * 最新 Release 版本（已去掉前缀 v）
+     */
+    "latestVersion": string;
+
+    /**
+     * 是否有新版本
+     */
+    "hasUpdate": boolean;
+
+    /**
+     * Release 页面地址
+     */
+    "releaseUrl": string;
+
+    /**
+     * 第一个资产下载地址（可能为空）
+     */
+    "downloadUrl": string;
+
+    /**
+     * Release 说明
+     */
+    "notes": string;
+
+    /** Creates a new UpdateInfo instance. */
+    constructor($$source: Partial<UpdateInfo> = {}) {
+        if (!("currentVersion" in $$source)) {
+            this["currentVersion"] = "";
+        }
+        if (!("latestVersion" in $$source)) {
+            this["latestVersion"] = "";
+        }
+        if (!("hasUpdate" in $$source)) {
+            this["hasUpdate"] = false;
+        }
+        if (!("releaseUrl" in $$source)) {
+            this["releaseUrl"] = "";
+        }
+        if (!("downloadUrl" in $$source)) {
+            this["downloadUrl"] = "";
+        }
+        if (!("notes" in $$source)) {
+            this["notes"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateInfo($$parsedSource as Partial<UpdateInfo>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = PortEntry.createFrom;
 const $$createType1 = $Create.Array($$createType0);

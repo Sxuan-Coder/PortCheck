@@ -5,6 +5,7 @@ import { PortService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
 import AppIcon from './AppIcon.vue'
 import { useToast } from '../composables/useToast'
 import { useTheme } from '../composables/useTheme'
+import { checkUpdate } from '../composables/useUpdate'
 
 const { toast } = useToast()
 const { toggle } = useTheme()
@@ -52,8 +53,13 @@ async function execute() {
     toast('已切换主题', 'success')
     return
   }
+  if (v === 'update') {
+    open.value = false
+    checkUpdate()
+    return
+  }
   if (v === 'help') {
-    toast('可用指令：kill <PID> · theme · help', 'info')
+    toast('可用指令：kill <PID> · theme · update · help', 'info')
     return
   }
   toast(`未知指令: ${v}（输入 help 查看）`, 'error')
@@ -72,7 +78,7 @@ function onKey(e: KeyboardEvent) {
         <span class="qc-title">⚡ 快速指令</span>
         <button class="qc-x" @click="open = false"><AppIcon name="close" :size="11" /></button>
       </div>
-      <p class="qc-hint">支持 kill &lt;PID&gt;、theme、help</p>
+      <p class="qc-hint">支持 kill &lt;PID&gt;、theme、update、help</p>
       <div class="qc-input-wrap">
         <input
           ref="inputEl"

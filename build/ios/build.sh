@@ -4,8 +4,8 @@ set -e
 # Build configuration
 APP_NAME="PortCheck"
 BUNDLE_ID="com.sxuan-coder.portcheck"
-VERSION="2.0.0"
-BUILD_NUMBER="2.0.0"
+VERSION="2.1.0"
+BUILD_NUMBER="2.1.0"
 BUILD_DIR="build/ios"
 TARGET="simulator"
 

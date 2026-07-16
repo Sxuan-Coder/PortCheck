@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppIcon from './AppIcon.vue'
+import { checkUpdate } from '../composables/useUpdate'
 
 defineProps<{ active: string }>()
 defineEmits<{ (e: 'switch', tab: string): void }>()
@@ -33,7 +34,10 @@ const items: { id: string; icon: string; label: string }[] = [
     </nav>
 
     <div class="foot">
-      <div class="ver">v2.0.0</div>
+      <button class="upd" title="检查更新" @click="checkUpdate">
+        <AppIcon name="refresh" :size="15" />
+      </button>
+      <div class="ver">v2.1.0</div>
     </div>
   </aside>
 </template>
@@ -122,7 +126,28 @@ const items: { id: string; icon: string; label: string }[] = [
   opacity: 1;
 }
 .foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   color: var(--text-4);
+}
+.upd {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--text-3);
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.upd:hover {
+  color: var(--brand);
+  border-color: var(--brand-glow);
+  background: var(--brand-glow);
 }
 .ver {
   font-size: 10px;

@@ -4,10 +4,12 @@
 import * as PortService from "./portservice.js";
 import * as ServicesService from "./servicesservice.js";
 import * as StartupService from "./startupservice.js";
+import * as UpdateService from "./updateservice.js";
 export {
     PortService,
     ServicesService,
-    StartupService
+    StartupService,
+    UpdateService
 };
 
 export {
@@ -15,5 +17,6 @@ export {
     PortEntry,
     PortListResult,
     ServiceEntry,
-    StartupEntry
+    StartupEntry,
+    UpdateInfo
 } from "./models.js";
