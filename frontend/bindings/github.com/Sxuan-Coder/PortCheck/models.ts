@@ -132,6 +132,86 @@ export class PortListResult {
     }
 }
 
+/**
+ * ServiceEntry 描述一条 Windows 服务，v1 只读。
+ */
+export class ServiceEntry {
+    "name": string;
+    "displayName": string;
+
+    /**
+     * 运行中 / 已停止 / 已暂停 / 未知
+     */
+    "state": string;
+
+    /**
+     * 自动 / 手动 / 禁用 / 未知
+     */
+    "startType": string;
+
+    /** Creates a new ServiceEntry instance. */
+    constructor($$source: Partial<ServiceEntry> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("startType" in $$source)) {
+            this["startType"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ServiceEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ServiceEntry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ServiceEntry($$parsedSource as Partial<ServiceEntry>);
+    }
+}
+
+/**
+ * StartupEntry 描述一条开机启动项，v1 只读。
+ */
+export class StartupEntry {
+    "name": string;
+    "command": string;
+
+    /**
+     * HKCU / HKLM / StartupFolder
+     */
+    "location": string;
+
+    /** Creates a new StartupEntry instance. */
+    constructor($$source: Partial<StartupEntry> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("command" in $$source)) {
+            this["command"] = "";
+        }
+        if (!("location" in $$source)) {
+            this["location"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new StartupEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): StartupEntry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new StartupEntry($$parsedSource as Partial<StartupEntry>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = PortEntry.createFrom;
 const $$createType1 = $Create.Array($$createType0);
