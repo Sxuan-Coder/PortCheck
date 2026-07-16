@@ -8,10 +8,10 @@ info:
   companyName: "Sxuan-Coder" # The name of the company
   productName: "PortCheck" # The name of the application
   productIdentifier: "com.sxuan-coder.portcheck" # The unique product identifier
-  description: "Windows local port watcher built with Wails" # The application description
+  description: "Windows local task manager & port watcher built with Wails" # The application description
   copyright: "(c) 2026, Sxuan-Coder" # Copyright text
-  comments: "PortCheck MVP" # Comments
-  version: "0.0.1" # The application version
+  comments: "PortCheck v2.0 - FastTaskManager" # Comments
+  version: "2.0.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"

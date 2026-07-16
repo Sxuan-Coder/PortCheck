@@ -33,7 +33,7 @@ const items: { id: string; icon: string; label: string }[] = [
     </nav>
 
     <div class="foot">
-      <div class="ver">v2.0</div>
+      <div class="ver">v2.0.0</div>
     </div>
   </aside>
 </template>
