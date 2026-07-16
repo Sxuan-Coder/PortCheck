@@ -1,5 +1,6 @@
 # Wails / Go build output
 /bin/
+/PortCheck.exe
 /frontend/dist/
 /.task/
 *.syso
