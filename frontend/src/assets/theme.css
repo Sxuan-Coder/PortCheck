@@ -1,0 +1,153 @@
+/* PortCheck 全局样式：设计 token + 亚克力外壳 + 暗亮双主题 + 滚动条。
+   纯 CSS（不引 Tailwind），保持轻量；滚动区与表格行刻意不加 backdrop-filter，
+   避免大数据刷新时的 paint-storm。 */
+
+:root {
+  /* 品牌色（teal） */
+  --brand: #14b8a6;
+  --brand-light: #2dd4bf;
+  --brand-dark: #0f766e;
+  --brand-glow: rgba(20, 184, 166, 0.15);
+
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --emerald: #10b981;
+  --amber: #f59e0b;
+
+  /* 暗色（默认） */
+  --bg-app: #0b0c10;
+  --bg-wall-from: #050608;
+  --bg-wall-via: #121622;
+  --bg-wall-to: #0d0f14;
+  --win-bg: rgba(15, 17, 23, 0.7);
+  --sidebar-bg: rgba(10, 12, 16, 0.6);
+  --panel-bg: rgba(0, 0, 0, 0.1);
+  --row-hover: rgba(255, 255, 255, 0.04);
+  --row-alt: rgba(255, 255, 255, 0.02);
+  --header-bg: rgba(255, 255, 255, 0.05);
+  --hairline: rgba(255, 255, 255, 0.06);
+  --hairline-strong: rgba(255, 255, 255, 0.1);
+
+  --text-1: #f3f4f6;   /* 主文字 */
+  --text-2: #d1d5db;   /* 次文字 */
+  --text-3: #9ca3af;   /* 弱文字 */
+  --text-4: #6b7280;   /* 占位/极弱 */
+
+  --field-bg: rgba(255, 255, 255, 0.05);
+  --field-bg-focus: rgba(255, 255, 255, 0.1);
+
+  --radius-xl: 14px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+  --blur: 24px;
+
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ============ 日间温和主题 ============ */
+body.light-theme {
+  --bg-app: #f1f5f9;
+  --bg-wall-from: #f8fafc;
+  --bg-wall-via: #cbd5e1;
+  --bg-wall-to: #e2e8f0;
+  --win-bg: rgba(255, 255, 255, 0.6);
+  --sidebar-bg: rgba(241, 245, 249, 0.75);
+  --panel-bg: rgba(255, 255, 255, 0.45);
+  --row-hover: rgba(0, 0, 0, 0.03);
+  --row-alt: rgba(0, 0, 0, 0.015);
+  --header-bg: rgba(0, 0, 0, 0.03);
+  --hairline: rgba(0, 0, 0, 0.08);
+  --hairline-strong: rgba(0, 0, 0, 0.1);
+
+  --text-1: #1e293b;
+  --text-2: #334155;
+  --text-3: #475569;
+  --text-4: #94a3b8;
+
+  --field-bg: rgba(255, 255, 255, 0.6);
+  --field-bg-focus: rgba(255, 255, 255, 0.95);
+
+  --shadow-2xl: 0 25px 50px -12px rgba(15, 23, 42, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: "Segoe UI", "Inter", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#app {
+  height: 100vh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-family: "Cascadia Code", "Consolas", "SF Mono", monospace;
+}
+
+/* ============ 滚动条 ============ */
+.scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: 99px;
+}
+.scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--brand);
+}
+
+/* ============ 亚克力工具类 ============ */
+.acrylic-blur {
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(140%);
+}
+.acrylic-card {
+  background: var(--field-bg);
+  border: 1px solid var(--hairline);
+  transition: border-color 0.25s, background 0.25s;
+}
+.acrylic-card:hover {
+  border-color: var(--brand-glow);
+}
+
+/* 危险/警示点呼吸 */
+@keyframes warning-glow {
+  0%, 100% { transform: scale(1); opacity: 0.85; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 8px 3px rgba(239, 68, 68, 0.4); }
+}
+.dot-warning {
+  animation: warning-glow 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
