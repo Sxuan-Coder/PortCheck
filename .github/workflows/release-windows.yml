@@ -147,7 +147,7 @@ jobs:
           }
 
           @"
-          # PortCheck V$displayVersion版本
+          # PortCheck V${displayVersion}版本
 
           ## 主要改动
 
