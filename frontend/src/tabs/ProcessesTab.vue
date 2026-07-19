@@ -155,7 +155,7 @@ function singleColor(cpu: number) {
             class="row body"
           >
             <div class="c-name">
-              <span class="dot" :class="{ warning: p.cpu > 50 }" />
+              <img class="app-ico" :src="p.iconDataUrl || '/appicon.png'" alt="" />
               <div class="name-wrap">
                 <span class="name">{{ p.name }}</span>
                 <span class="path" :title="p.path">{{ p.path || '—' }}</span>
@@ -320,17 +320,18 @@ function singleColor(cpu: number) {
   gap: 8px;
   min-width: 0;
 }
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--brand);
-  opacity: 0.6;
+.app-ico {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   flex-shrink: 0;
+  object-fit: contain;
+  background: var(--field-bg);
 }
-.dot.warning {
-  background: var(--red);
-  opacity: 1;
+.app-ico.placeholder {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--field-bg), var(--hairline));
+  border: 1px solid var(--hairline);
 }
 .name-wrap {
   display: flex;

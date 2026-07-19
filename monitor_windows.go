@@ -99,16 +99,20 @@ func sampleProcessesAndPerf(s *MonitorService, elapsed float64) ([]ProcessInfo, 
 	}
 
 	seen := make(map[uint32]int64, len(s.prevProcTimes))
+	infoCache := make(map[uint32]processInfo, 256)
 	for {
 		pid := entry.ProcessID
 		if cpu, mem, ok := queryProcessLoad(pid); ok {
 			seen[pid] = cpu
 			prev := s.prevProcTimes[pid]
+			info := cachedProcessInfo(infoCache, pid)
 			out = append(out, ProcessInfo{
-				PID:      pid,
-				Name:     processNameByPID(pid),
-				CPU:      cpuPercent(cpu, prev, elapsed),
-				MemBytes: mem,
+				PID:         pid,
+				Name:        info.name,
+				Path:        info.path,
+				CPU:         cpuPercent(cpu, prev, elapsed),
+				MemBytes:    mem,
+				IconDataURL: iconDataURLForEmit(info.path),
 			})
 		}
 		if err := windows.Process32Next(snapshot, &entry); err != nil {

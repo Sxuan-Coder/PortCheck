@@ -21,6 +21,26 @@ const state = shallowReactive<MonitorState>({
   ready: false,
 })
 
+// 进程图标按路径缓存：后端每路径通常只在某一 tick 推送一次 iconDataUrl。
+// 空路径统一键，对应应用 logo 回退。
+const processIconByPath = new Map<string, string>()
+const FALLBACK_ICON = '/appicon.png'
+
+function mergeProcessIcons(list: ProcessInfo[]): ProcessInfo[] {
+  return list.map((p) => {
+    const path = (p.path || '').trim().toLowerCase()
+    const key = path || '__fallback__'
+    if (p.iconDataUrl) {
+      processIconByPath.set(key, p.iconDataUrl)
+      return p
+    }
+    const cached = processIconByPath.get(key)
+    if (cached) return { ...p, iconDataUrl: cached }
+    // 尚未推送时先用应用 logo，避免灰块闪烁。
+    return { ...p, iconDataUrl: FALLBACK_ICON }
+  })
+}
+
 let installed = false
 
 function install() {
@@ -31,7 +51,7 @@ function install() {
     if (!tick || !tick.perf) return
     state.perf = tick.perf
     state.portStats = tick.portStats || state.portStats
-    state.processes = markRaw(tick.processes || [])
+    state.processes = markRaw(mergeProcessIcons(tick.processes || []))
     state.ready = true
   })
   // 复用 off 句柄，便于卸载（应用常驻，实际不卸载）
