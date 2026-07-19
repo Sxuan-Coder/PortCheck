@@ -19,6 +19,10 @@ pnpm-debug.log*
 .env
 .env.*
 
+# Local planning docs (not for remote)
+/docs/plan/
+/docs/superpowers/
+
 # OS / editor
 .DS_Store
 Thumbs.db
