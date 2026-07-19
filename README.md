@@ -4,12 +4,18 @@
 [![Wails](https://img.shields.io/badge/Wails-v3-E55353?logo=wails&logoColor=white)](https://v3.wails.io)
 [![Vue](https://img.shields.io/badge/Vue.js-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Version](https://img.shields.io/badge/version-2.1.0-14b8a6)](#)
+[![Version](https://img.shields.io/badge/version-2.2.0-14b8a6)](#)
 [![下载](https://img.shields.io/badge/下载-Releases-2158FF?logo=github&logoColor=white)](https://github.com/Sxuan-Coder/PortCheck/releases/latest)
 
 PortCheck 是一款面向 Windows 的**轻量任务管理工具**，聚焦日常系统维护与开发者本地排查场景：进程、性能、端口、服务、启动项一览，提供更直接的查看与操作体验。
 
 > 本地服务端口被谁占了？Codex / cc 帮你开了一堆后台开发服务器没关？一眼看清 Node.js、Java、Python、Go 进程，确认后即可结束。
+
+## ✨ v2.2 更新
+
+- **服务可操作**：确认后停止/启动 Windows 服务（关键服务保护 + 按需 UAC 提权）
+- **启动项可操作**：确认后禁用/启用/删除开机启动项
+- **应用图标**：启动项与进程列表显示应用图标，提取失败回退 PortCheck logo
 
 ## ✨ v2.0 重大更新
 
@@ -141,12 +147,15 @@ go test ./...
 ├── portservice_other.go        # 非 Windows 占位实现
 ├── processinfo_windows.go      # 进程名/路径查询助手（端口与进程采样共用）
 ├── monitor.go / monitor_*.go   # MonitorService：1s 批量事件推送（进程+性能+端口统计）
-├── services_windows.go         # Windows 服务只读枚举
-├── startup_windows.go          # 启动项只读枚举
+├── services_windows.go         # Windows 服务枚举与停止/启动
+├── startup_windows.go          # 启动项枚举与删除/禁用/启用
+├── elevate_windows.go          # 按需 UAC 提权（runas + 结果文件）
+├── icon_windows.go             # 应用图标提取（启动项/进程）
+├── update.go                   # 检查更新
 ├── frontend/                   # Vue3 + 纯 CSS 前端
 │   ├── src/tabs/               # 进程/性能/端口/服务/启动项 五个视图
 │   ├── src/components/         # 标题栏/侧栏/迷你图/速启/Toast
-│   └── src/composables/        # monitor/theme/toast/虚拟滚动
+│   └── src/composables/        # monitor/theme/toast/update/虚拟滚动
 ├── build/                      # Wails 构建配置与图标
 └── Taskfile.yml                # Wails 任务入口
 ```

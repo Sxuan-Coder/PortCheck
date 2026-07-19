@@ -7,7 +7,7 @@
 		<key>CFBundleExecutable</key>
 		<string>PortCheck</string>
 		<key>CFBundleGetInfoString</key>
-		<string>PortCheck v2.1 - check update</string>
+		<string>PortCheck v2.2 - check update</string>
 		<key>CFBundleIdentifier</key>
 		<string>com.sxuan-coder.portcheck.dev</string>
 		<key>CFBundleName</key>
@@ -15,9 +15,9 @@
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
-		<string>2.1.0-dev</string>
+		<string>2.2.0-dev</string>
 		<key>CFBundleVersion</key>
-		<string>2.1.0</string>
+		<string>2.2.0</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>MinimumOSVersion</key>

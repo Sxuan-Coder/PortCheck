@@ -10,8 +10,8 @@ info:
   productIdentifier: "com.sxuan-coder.portcheck" # The unique product identifier
   description: "Windows local task manager & port watcher built with Wails" # The application description
   copyright: "(c) 2026, Sxuan-Coder" # Copyright text
-  comments: "PortCheck v2.1 - check update" # Comments
-  version: "2.1.0" # The application version
+  comments: "PortCheck v2.2 - check update" # Comments
+  version: "2.2.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"
