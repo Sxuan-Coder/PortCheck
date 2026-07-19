@@ -213,6 +213,38 @@ export class ServiceOpResult {
 }
 
 /**
+ * Settings 是应用的用户可配置项。
+ */
+export class Settings {
+    "theme": string;
+    "refreshIntervalMs": number;
+    "language": string;
+
+    /** Creates a new Settings instance. */
+    constructor($$source: Partial<Settings> = {}) {
+        if (!("theme" in $$source)) {
+            this["theme"] = "";
+        }
+        if (!("refreshIntervalMs" in $$source)) {
+            this["refreshIntervalMs"] = 0;
+        }
+        if (!("language" in $$source)) {
+            this["language"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Settings instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Settings {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Settings($$parsedSource as Partial<Settings>);
+    }
+}
+
+/**
  * StartupEntry 描述一条开机启动项，v2 支持删除/禁用/启用。
  */
 export class StartupEntry {
