@@ -1,10 +1,10 @@
 {
 	"fixed": {
-		"file_version": "2.2.0"
+		"file_version": "2.2.1"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "2.2.0",
+			"ProductVersion": "2.2.1",
 			"CompanyName": "Sxuan-Coder",
 			"FileDescription": "Windows local task manager & port watcher built with Wails",
 			"LegalCopyright": "(c) 2026, Sxuan-Coder",

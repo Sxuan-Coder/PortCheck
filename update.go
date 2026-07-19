@@ -15,7 +15,7 @@ import (
 // 应用版本与仓库信息。
 // 注意：发布新版本时需与 build/config.yml、frontend/package.json 保持一致。
 const (
-	appVersion = "2.2.0"
+	appVersion = "2.2.1"
 	repoOwner  = "Sxuan-Coder"
 	repoName   = "PortCheck"
 	githubAPI  = "https://api.github.com/repos/" + repoOwner + "/" + repoName + "/releases/latest"

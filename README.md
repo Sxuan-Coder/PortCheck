@@ -4,7 +4,7 @@
 [![Wails](https://img.shields.io/badge/Wails-v3-E55353?logo=wails&logoColor=white)](https://v3.wails.io)
 [![Vue](https://img.shields.io/badge/Vue.js-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Version](https://img.shields.io/badge/version-2.2.0-14b8a6)](#)
+[![Version](https://img.shields.io/badge/version-2.2.1-14b8a6)](#)
 [![下载](https://img.shields.io/badge/下载-Releases-2158FF?logo=github&logoColor=white)](https://github.com/Sxuan-Coder/PortCheck/releases/latest)
 
 PortCheck 是一款面向 Windows 的**轻量任务管理工具**，聚焦日常系统维护与开发者本地排查场景：进程、性能、端口、服务、启动项一览，提供更直接的查看与操作体验。
