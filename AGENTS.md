@@ -38,22 +38,21 @@
 - 涉及进程路径、用户名、公司目录的截图或文章素材要先脱敏。
 - 修改 Go 服务方法后，`wails3 task build` 会自动 `wails3 generate bindings -ts` 重新生成 `frontend/bindings`（`.ts`）；勿手改生成产物。
 
-## 验证命令
+## 经验教训
 
-修改后优先跑：
+### 版本号批量替换时勿伤 lockfile 依赖版本
 
-```powershell
-cd frontend
-npm install
-npm run build
-cd ..
+- **触发信号：** 用 `sed` 全局替换版本号（如 `2.2.0 → 2.2.1`）后，`npm install` 因 npmmirror 404 失败。
+- **根因：** `package-lock.json` 嵌套了大量依赖自身的 `version` 字段（如 `brace-expansion` 的版本 `2.2.0`），全局替换误改了它们。
+- **正确做法：** `sed` 替换时先用 `git grep "2\.2\.0"` 列出所有命中位置，排除 lockfile 中的依赖包版本；或只替换 `update.go`、`package.json`、`build/config.yml` 等明确的应用版本号文件，lockfile 用 `npm install` 自动更新。
+- **验证方式：** 替换后 `npm install` 应无报错，`git diff package-lock.json` 检查只有顶层 `version` 被改。
 
-go test ./...
-wails3 task build
-```
+### Git 提交信息必须使用中文
 
-如果只是改文档，可以不跑完整构建，但要说明没有运行。
-
+- **触发信号：** 子代理自动提交时使用了英文 commit message（如 `feat: add Settings struct`），不符合仓库惯例。
+- **根因：** 子代理默认使用英文，未遵循本仓库 `commit 规范` 中 `summary 使用中文` 的要求。
+- **正确做法：** `summary` 使用中文、动词开头、长度 ≤ 50 字、不加句号。格式 `<type>(scope): 中文描述`。
+- **验证方式：** 推送前 `git log --oneline` 检查每条 message 是否为中文。
 
 ## 验证命令
 
