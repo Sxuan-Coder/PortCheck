@@ -10,6 +10,7 @@ import PerformanceTab from './tabs/PerformanceTab.vue'
 import PortsTab from './tabs/PortsTab.vue'
 import ServicesTab from './tabs/ServicesTab.vue'
 import StartupTab from './tabs/StartupTab.vue'
+import SettingsTab from './tabs/SettingsTab.vue'
 
 const active = ref('processes')
 
@@ -32,6 +33,7 @@ function onSwitch(tab: string) {
         <PortsTab v-show="active === 'ports'" />
         <ServicesTab v-if="active === 'services'" />
         <StartupTab v-if="active === 'startup'" />
+        <SettingsTab v-if="active === 'settings'" />
       </section>
 
       <QuickCommand />
