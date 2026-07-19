@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -15,6 +16,12 @@ var assets embed.FS
 var appIcon []byte
 
 func main() {
+	// 提权子进程模式：不启动 GUI，执行单次写操作后立即退出。
+	if isElevatedHelper(os.Args) {
+		runElevatedHelper(os.Args)
+		return
+	}
+
 	app := application.New(application.Options{
 		Name:        "PortCheck",
 		Description: "Windows local task manager & port watcher built with Wails",

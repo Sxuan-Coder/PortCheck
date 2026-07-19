@@ -133,7 +133,7 @@ export class PortListResult {
 }
 
 /**
- * ServiceEntry 描述一条 Windows 服务，v1 只读。
+ * ServiceEntry 描述一条 Windows 服务，v2 支持停止/启动。
  */
 export class ServiceEntry {
     "name": string;
@@ -177,7 +177,43 @@ export class ServiceEntry {
 }
 
 /**
- * StartupEntry 描述一条开机启动项，v1 只读。
+ * ServiceOpResult 是服务停止/启动操作的结果。
+ */
+export class ServiceOpResult {
+    "name": string;
+
+    /**
+     * "stop" / "start"
+     */
+    "action": string;
+    "message": string;
+
+    /** Creates a new ServiceOpResult instance. */
+    constructor($$source: Partial<ServiceOpResult> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("action" in $$source)) {
+            this["action"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ServiceOpResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ServiceOpResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ServiceOpResult($$parsedSource as Partial<ServiceOpResult>);
+    }
+}
+
+/**
+ * StartupEntry 描述一条开机启动项，v2 支持删除/禁用/启用。
  */
 export class StartupEntry {
     "name": string;
@@ -187,6 +223,16 @@ export class StartupEntry {
      * HKCU / HKLM / StartupFolder
      */
     "location": string;
+
+    /**
+     * 来自 StartupApproved
+     */
+    "disabled": boolean;
+
+    /**
+     * 应用图标 data:image/png;base64,... ；失败为空
+     */
+    "iconDataUrl": string;
 
     /** Creates a new StartupEntry instance. */
     constructor($$source: Partial<StartupEntry> = {}) {
@@ -199,6 +245,12 @@ export class StartupEntry {
         if (!("location" in $$source)) {
             this["location"] = "";
         }
+        if (!("disabled" in $$source)) {
+            this["disabled"] = false;
+        }
+        if (!("iconDataUrl" in $$source)) {
+            this["iconDataUrl"] = "";
+        }
 
         Object.assign(this, $$source);
     }
@@ -209,6 +261,42 @@ export class StartupEntry {
     static createFrom($$source: any = {}): StartupEntry {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new StartupEntry($$parsedSource as Partial<StartupEntry>);
+    }
+}
+
+/**
+ * StartupOpResult 是启动项删除/禁用/启用操作的结果。
+ */
+export class StartupOpResult {
+    "name": string;
+
+    /**
+     * "delete" / "disable" / "enable"
+     */
+    "action": string;
+    "message": string;
+
+    /** Creates a new StartupOpResult instance. */
+    constructor($$source: Partial<StartupOpResult> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("action" in $$source)) {
+            this["action"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new StartupOpResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): StartupOpResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new StartupOpResult($$parsedSource as Partial<StartupOpResult>);
     }
 }
 

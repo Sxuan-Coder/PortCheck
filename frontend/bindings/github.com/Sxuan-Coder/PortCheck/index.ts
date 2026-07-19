@@ -17,6 +17,8 @@ export {
     PortEntry,
     PortListResult,
     ServiceEntry,
+    ServiceOpResult,
     StartupEntry,
+    StartupOpResult,
     UpdateInfo
 } from "./models.js";
