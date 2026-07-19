@@ -16,7 +16,8 @@ const monitorTickEvent = "monitor:tick"
 type MonitorService struct {
 	mu sync.Mutex
 
-	cancel context.CancelFunc
+	cancel    context.CancelFunc
+	intervalCh chan time.Duration // 运行时调整推送间隔
 
 	// 进程 CPU 差值状态：上一秒每个 PID 的累计 CPU 时间（100ns 刻度）。
 	prevProcTimes map[uint32]int64
@@ -33,6 +34,7 @@ type MonitorService struct {
 
 // ServiceStartup 在应用启动时读取 CPU 信息并启动后台采样循环。
 func (s *MonitorService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	s.intervalCh = make(chan time.Duration, 1)
 	s.numCores, s.cpuName = readCPUInfo()
 	s.prevProcTimes = map[uint32]int64{}
 	s.prevWhen = time.Now()
@@ -52,7 +54,8 @@ func (s *MonitorService) ServiceShutdown() error {
 }
 
 func (s *MonitorService) tickLoop(ctx context.Context) {
-	ticker := time.NewTicker(time.Second)
+	interval := time.Second
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
@@ -61,6 +64,15 @@ func (s *MonitorService) tickLoop(ctx context.Context) {
 			return
 		case now := <-ticker.C:
 			s.emitTick(now)
+		case newInterval := <-s.intervalCh:
+			if newInterval < 200*time.Millisecond {
+				newInterval = 200 * time.Millisecond
+			}
+			if newInterval > 10*time.Second {
+				newInterval = 10 * time.Second
+			}
+			ticker.Stop()
+			ticker = time.NewTicker(newInterval)
 		}
 	}
 }
@@ -90,4 +102,13 @@ func (s *MonitorService) emitTick(now time.Time) {
 	if app := application.Get(); app != nil {
 		app.Event.EmitEvent(&application.CustomEvent{Name: monitorTickEvent, Data: payload})
 	}
+}
+
+// SetInterval 动态调整采样推送间隔（毫秒），范围 200-10000；超范围自动钳位。
+func (s *MonitorService) SetInterval(ms int) error {
+	select {
+	case s.intervalCh <- time.Duration(ms) * time.Millisecond:
+	default:
+	}
+	return nil
 }
