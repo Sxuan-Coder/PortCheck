@@ -82,6 +82,11 @@ FunctionEnd
 Section
     !insertmacro wails.setShellContext
 
+    ; 先结束正在运行的旧版本进程（PortCheck 常驻托盘，关闭窗口仅最小化），
+    ; 避免 exe 被占用导致覆盖失败。
+    nsExec::ExecToLog 'taskkill /F /IM "${PRODUCT_EXECUTABLE}"'
+    Sleep 500
+
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
@@ -99,6 +104,10 @@ SectionEnd
 
 Section "uninstall" 
     !insertmacro wails.setShellContext
+
+    ; 卸载前同样先结束运行中的进程，避免 RMDir 删除目录失败
+    nsExec::ExecToLog 'taskkill /F /IM "${PRODUCT_EXECUTABLE}"'
+    Sleep 500
 
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
 
