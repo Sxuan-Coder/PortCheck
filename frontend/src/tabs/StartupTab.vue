@@ -10,6 +10,7 @@ const { toast } = useToast()
 const items = ref<StartupEntry[]>([])
 const loading = ref(false)
 const query = ref('')
+const statef = ref<'ALL' | 'ENABLED' | 'DISABLED'>('ALL')
 const acting = ref<string | null>(null)
 
 async function load() {
@@ -25,10 +26,12 @@ async function load() {
 
 const filtered = () => {
   const q = query.value.trim().toLowerCase()
-  if (!q) return items.value
-  return items.value.filter(
-    (s) => s.name.toLowerCase().includes(q) || s.command.toLowerCase().includes(q) || s.location.toLowerCase().includes(q),
-  )
+  return items.value.filter((s) => {
+    if (statef.value === 'ENABLED' && s.disabled) return false
+    if (statef.value === 'DISABLED' && !s.disabled) return false
+    if (!q) return true
+    return s.name.toLowerCase().includes(q) || s.command.toLowerCase().includes(q) || s.location.toLowerCase().includes(q)
+  })
 }
 
 const locTag = (loc: string) => {
@@ -99,6 +102,11 @@ onMounted(load)
   <div class="tab">
     <div class="head">
       <input v-model="query" type="search" placeholder="搜索启动项名称、命令、位置…" />
+      <select v-model="statef" title="按状态筛选">
+        <option value="ALL">全部状态</option>
+        <option value="ENABLED">已启用</option>
+        <option value="DISABLED">已禁用</option>
+      </select>
       <button class="refresh" :disabled="loading" @click="load"><span :class="{ spinning: loading }">⟳</span> 刷新</button>
     </div>
     <div class="table">
@@ -136,7 +144,7 @@ onMounted(load)
         </div>
       </div>
     </div>
-    <div class="foot">共 {{ formatNumber(items.length) }} 项</div>
+    <div class="foot">共 {{ formatNumber(filtered().length) }} 项<template v-if="filtered().length !== items.length"> / {{ formatNumber(items.length) }} 项</template></div>
   </div>
 </template>
 
@@ -145,6 +153,8 @@ onMounted(load)
 .head { display: flex; gap: 8px; }
 .head input { flex: 1; padding: 7px 10px; background: var(--field-bg); border: 1px solid var(--hairline); border-radius: var(--radius-sm); color: var(--text-1); font-size: 12px; outline: none; }
 .head input:focus { border-color: var(--brand); }
+.head select { width: 110px; padding: 7px 10px; background: var(--field-bg); border: 1px solid var(--hairline); border-radius: var(--radius-sm); color: var(--text-1); font-size: 12px; outline: none; }
+.head select:focus { border-color: var(--brand); }
 .refresh { padding: 7px 14px; background: var(--brand-glow); border: 1px solid var(--brand-glow); color: var(--brand); border-radius: var(--radius-sm); font-size: 12px; }
 .refresh:disabled { opacity: 0.5; }
 .spinning { display: inline-block; animation: spin 0.9s linear infinite; }
