@@ -22,6 +22,10 @@ func main() {
 		return
 	}
 
+	// 启动早期：设置要求"整个系统"进程范围且当前非管理员时，自动提权重启自身，
+	// 否则重启后普通权限下 SYSTEM 进程不可见（与 dev 或打包运行方式无关）。
+	ensureProcessScopeElevation()
+
 	app := application.New(application.Options{
 		Name:        "PortCheck",
 		Description: "Windows local task manager & port watcher built with Wails",

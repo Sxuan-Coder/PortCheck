@@ -28,3 +28,6 @@ func isElevated() bool {
 func relaunchElevated() error {
 	return errors.New("提权重启目前只支持 Windows")
 }
+
+// ensureProcessScopeElevation 非 Windows 占位：不处理。
+func ensureProcessScopeElevation() {}

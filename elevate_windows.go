@@ -67,6 +67,24 @@ func relaunchElevated() error {
 	return nil
 }
 
+// ensureProcessScopeElevation 在启动早期（GUI 初始化前）调用：
+// 当设置要求"整个系统"进程范围但当前进程非管理员时，自动 runas 提权重启自身并退出当前实例，
+// 避免重启后退回普通权限导致 SYSTEM 进程再次不可见。用户取消 UAC 或提权失败时继续以当前权限启动。
+func ensureProcessScopeElevation() {
+	s, err := (&SettingsService{}).GetSettings()
+	if err != nil || s.ProcessScope != processScopeSystem || isElevated() {
+		return
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return
+	}
+	if err := shellExecuteRunAsNoWait(exe); err != nil {
+		return
+	}
+	os.Exit(0)
+}
+
 // isAccessDenied 判断错误是否为权限不足。
 func isAccessDenied(err error) bool {
 	if err == nil {
