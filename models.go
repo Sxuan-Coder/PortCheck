@@ -12,11 +12,13 @@ type ProcessInfo struct {
 
 // PerfSnapshot 描述整机 CPU 与内存的实时指标。
 type PerfSnapshot struct {
-	CPUPercent float64 `json:"cpuPercent"` // 0-100，整机占用
-	MemUsedGB  float64 `json:"memUsedGB"`  // 物理内存已用 (GB)
-	MemTotalGB float64 `json:"memTotalGB"` // 物理内存总量 (GB)
-	CPUName    string  `json:"cpuName"`    // CPU 型号名
-	NumCores   int     `json:"numCores"`   // 逻辑核心数
+	CPUPercent    float64 `json:"cpuPercent"`    // 0-100，整机占用
+	MemUsedGB     float64 `json:"memUsedGB"`     // 物理内存已用 (GB)
+	MemTotalGB    float64 `json:"memTotalGB"`    // 物理内存总量 (GB)
+	CommitUsedGB  float64 `json:"commitUsedGB"`  // 已提交内存 (GB)，可超过物理内存（含页面文件）
+	CommitTotalGB float64 `json:"commitTotalGB"` // 提交限制 (GB) = 物理内存 + 页面文件上限
+	CPUName       string  `json:"cpuName"`       // CPU 型号名
+	NumCores      int     `json:"numCores"`      // 逻辑核心数
 }
 
 // ServiceEntry 描述一条 Windows 服务，v2 支持停止/启动。

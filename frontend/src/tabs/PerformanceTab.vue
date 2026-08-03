@@ -17,6 +17,9 @@ watch(
 
 const memPct = () =>
   state.perf.memTotalGB > 0 ? (state.perf.memUsedGB / state.perf.memTotalGB) * 100 : 0
+
+const commitPct = () =>
+  state.perf.commitTotalGB > 0 ? (state.perf.commitUsedGB / state.perf.commitTotalGB) * 100 : 0
 </script>
 
 <template>
@@ -43,6 +46,18 @@ const memPct = () =>
         <div class="card-sub">已用 / 总量</div>
         <div class="meter">
           <span :style="{ width: memPct() + '%', background: 'var(--purple)' }" />
+        </div>
+      </div>
+
+      <div class="card acrylic-card">
+        <div class="card-head">
+          <span>提交内存</span>
+          <span class="tag" :style="{ color: 'var(--amber)' }">{{ formatPercent(commitPct(), 0) }}</span>
+        </div>
+        <div class="card-title">{{ formatGB(state.perf.commitUsedGB) }} / {{ formatGB(state.perf.commitTotalGB) }}</div>
+        <div class="card-sub">已提交 / 提交限制（含页面文件）</div>
+        <div class="meter">
+          <span :style="{ width: commitPct() + '%', background: 'var(--amber)' }" />
         </div>
       </div>
 
@@ -84,7 +99,7 @@ const memPct = () =>
 }
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 .card {

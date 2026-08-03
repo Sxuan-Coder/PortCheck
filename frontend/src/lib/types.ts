@@ -15,6 +15,8 @@ export interface PerfSnapshot {
   cpuPercent: number
   memUsedGB: number
   memTotalGB: number
+  commitUsedGB: number
+  commitTotalGB: number
   cpuName: string
   numCores: number
 }

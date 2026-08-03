@@ -10,11 +10,11 @@ import (
 
 // 通过 lazyproc 调用 golang.org/x/sys/windows 未直接导出的性能 API。
 var (
-	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
-	psapi                      = windows.NewLazySystemDLL("psapi.dll")
-	procGetSystemTimes         = kernel32.NewProc("GetSystemTimes")
-	procGlobalMemoryStatusEx   = kernel32.NewProc("GlobalMemoryStatusEx")
-	procGetProcessMemoryInfo   = psapi.NewProc("GetProcessMemoryInfo")
+	kernel32                    = windows.NewLazySystemDLL("kernel32.dll")
+	psapi                       = windows.NewLazySystemDLL("psapi.dll")
+	procGetSystemTimes          = kernel32.NewProc("GetSystemTimes")
+	procGlobalMemoryStatusEx    = kernel32.NewProc("GlobalMemoryStatusEx")
+	procGetProcessMemoryInfo    = psapi.NewProc("GetProcessMemoryInfo")
 	procGetActiveProcessorCount = kernel32.NewProc("GetActiveProcessorCount")
 )
 
@@ -152,6 +152,11 @@ func samplePerfOnly(s *MonitorService) PerfSnapshot {
 	if r, _, _ := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mem))); r != 0 && mem.ullTotalPhys > 0 {
 		perf.MemTotalGB = bytesToGB(mem.ullTotalPhys)
 		perf.MemUsedGB = bytesToGB(mem.ullTotalPhys - mem.ullAvailPhys)
+		// 提交内存（含页面文件）：总量为提交限制，用量 = 限制 - 剩余可提交
+		if mem.ullTotalPageFile > 0 {
+			perf.CommitTotalGB = bytesToGB(mem.ullTotalPageFile)
+			perf.CommitUsedGB = bytesToGB(mem.ullTotalPageFile - mem.ullAvailPageFile)
+		}
 	}
 
 	return perf

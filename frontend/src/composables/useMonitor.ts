@@ -16,7 +16,7 @@ interface MonitorState {
 
 const state = shallowReactive<MonitorState>({
   processes: markRaw([]),
-  perf: { cpuPercent: 0, memUsedGB: 0, memTotalGB: 0, cpuName: '', numCores: 0 },
+  perf: { cpuPercent: 0, memUsedGB: 0, memTotalGB: 0, commitUsedGB: 0, commitTotalGB: 0, cpuName: '', numCores: 0 },
   portStats: { ports: [], tcpCount: 0, udpCount: 0, listeningCount: 0, processCount: 0, warnings: [] },
   ready: false,
 })
