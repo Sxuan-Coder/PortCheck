@@ -77,6 +77,13 @@ ShowInstDetails show # This will always show the installation details.
 
 Function .onInit
    !insertmacro wails.checkArchitecture
+
+   ; 读取上次安装目录（写入卸载注册表的 InstallLocation），升级时默认沿用，避免每次装回 C 盘
+   SetRegView 64
+   ReadRegStr $0 HKLM "${UNINST_KEY}" "InstallLocation"
+   ${If} $0 != ""
+       StrCpy $INSTDIR $0
+   ${EndIf}
 FunctionEnd
 
 Section
@@ -100,6 +107,10 @@ Section
     !insertmacro wails.associateCustomProtocols
     
     !insertmacro wails.writeUninstaller
+
+    ; 记住本次安装目录，供下次升级时默认沿用
+    SetRegView 64
+    WriteRegStr HKLM "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
 SectionEnd
 
 Section "uninstall" 
