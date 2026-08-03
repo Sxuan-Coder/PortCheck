@@ -15,7 +15,7 @@ const { toast } = useToast()
 const ROW_H = 44
 const query = ref('')
 const debounced = ref('')
-const sortBy = ref<'cpu' | 'mem'>('cpu')
+const sortBy = ref<'cpu' | 'mem' | 'commit'>('cpu')
 const typeFilter = ref<ProcessType>('all')
 const killing = ref<number | null>(null)
 
@@ -40,7 +40,9 @@ const filtered = computed<ProcessInfo[]>(() => {
     )
   })
   const sorted = [...list]
-  sorted.sort((a, b) => (sortBy.value === 'cpu' ? b.cpu - a.cpu : b.memBytes - a.memBytes))
+  sorted.sort((a, b) =>
+    sortBy.value === 'cpu' ? b.cpu - a.cpu : sortBy.value === 'mem' ? b.memBytes - a.memBytes : b.commitBytes - a.commitBytes,
+  )
   return sorted
 })
 
@@ -120,6 +122,7 @@ function singleColor(cpu: number) {
         <span class="label">排序</span>
         <button :class="{ on: sortBy === 'cpu' }" @click="sortBy = 'cpu'">CPU</button>
         <button :class="{ on: sortBy === 'mem' }" @click="sortBy = 'mem'">内存</button>
+        <button :class="{ on: sortBy === 'commit' }" @click="sortBy = 'commit'">提交内存</button>
       </div>
     </div>
 
@@ -143,6 +146,7 @@ function singleColor(cpu: number) {
           <div class="c-cpu">CPU 整机</div>
           <div class="c-cpu2">CPU 单核</div>
           <div class="c-mem">内存</div>
+          <div class="c-commit">提交内存</div>
           <div class="c-act">操作</div>
         </div>
       </div>
@@ -169,6 +173,7 @@ function singleColor(cpu: number) {
               {{ formatPercent(p.cpu) }}
             </div>
             <div class="c-mem mono">{{ formatBytes(p.memBytes) }}</div>
+            <div class="c-commit mono">{{ formatBytes(p.commitBytes) }}</div>
             <div class="c-act">
               <button
                 v-if="!isProtected(p.pid)"
@@ -281,7 +286,7 @@ function singleColor(cpu: number) {
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 70px 84px 84px 104px 80px;
+  grid-template-columns: 1fr 70px 84px 84px 104px 96px 80px;
   align-items: center;
 }
 .row.head {
@@ -296,6 +301,7 @@ function singleColor(cpu: number) {
 .c-cpu,
 .c-cpu2,
 .c-mem,
+.c-commit,
 .c-act {
   text-align: right;
   padding-right: 4px;

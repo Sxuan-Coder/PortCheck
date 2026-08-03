@@ -8,6 +8,7 @@ export interface ProcessInfo {
   path: string
   cpu: number // 单核基准百分比
   memBytes: number // 工作集字节
+  commitBytes: number // 提交内存字节（PagefileUsage，对应任务管理器"提交大小"）
   iconDataUrl?: string // 可选：后端每路径通常只推一次，前端缓存
 }
 
