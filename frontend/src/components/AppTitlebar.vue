@@ -34,7 +34,6 @@ async function onClose() {
 <template>
   <header class="titlebar" style="--wails-draggable: drag">
     <div class="brand">
-      <span class="bolt"><AppIcon name="terminal" :size="14" /></span>
       <span class="name">PortCheck</span>
       <span class="badge">REALTIME</span>
     </div>
@@ -76,17 +75,6 @@ async function onClose() {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.bolt {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--brand);
-  background: linear-gradient(135deg, var(--brand-glow), transparent);
-  border: 1px solid var(--brand-glow);
 }
 .name {
   font-size: 12px;
