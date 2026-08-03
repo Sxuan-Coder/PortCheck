@@ -141,7 +141,9 @@ jobs:
             $range = $releaseRef
           }
 
-          $history = git log $range --pretty=format:"- %s (%h)"
+          # git log 输出捕获为 string[]；here-string 插值数组默认用空格连接，
+          # 必须显式 -join 换行，否则所有 commit 会拼成一行。
+          $history = (git log $range --pretty=format:"- %s (%h)") -join "`n"
           if (!$history) {
             $history = "- 暂无提交记录"
           }
