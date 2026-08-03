@@ -87,6 +87,14 @@ body {
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  /* 默认暗色：让原生表单控件（select 下拉、滚动条等）跟随暗色渲染，
+     避免 WebView2 用亮色方案渲染出白底白字的低对比度下拉项。 */
+  color-scheme: dark;
+}
+
+/* 日间主题：原生控件切回亮色方案，保证下拉项可读 */
+body.light-theme {
+  color-scheme: light;
 }
 
 #app {
@@ -102,6 +110,19 @@ button {
 input,
 select {
   font: inherit;
+}
+
+/* select 展开后的原生 <option> 列表：WebView2 用系统背景画 item，
+   文字色却继承自 <select> 的 color（深色模式下被 var(--text-1) 染成白色），
+   导致白底白字。这里把 option 文字强制设回深色，并兜底背景，保证可读。
+   日间主题下 option 本就是深字白底，无需覆盖。 */
+select option {
+  color: #1e293b;
+  background: #ffffff;
+}
+body.light-theme select option {
+  color: inherit;
+  background: inherit;
 }
 
 .mono {
