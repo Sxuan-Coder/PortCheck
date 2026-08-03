@@ -5,10 +5,12 @@ import { PortService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
 import AppIcon from './AppIcon.vue'
 import { useToast } from '../composables/useToast'
 import { useTheme } from '../composables/useTheme'
+import { useSettings } from '../composables/useSettings'
 import { checkUpdate } from '../composables/useUpdate'
 
 const { toast } = useToast()
-const { toggle } = useTheme()
+const { theme } = useTheme()
+const { setThemeMode } = useSettings()
 
 const open = ref(false)
 const value = ref('')
@@ -49,7 +51,7 @@ async function execute() {
   }
 
   if (v === 'theme') {
-    toggle()
+    setThemeMode(theme.value === 'dark' ? 'light' : 'dark')
     toast('已切换主题', 'success')
     return
   }

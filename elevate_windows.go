@@ -14,6 +14,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sys/windows"
 )
 
@@ -30,7 +31,41 @@ const (
 	winErrorAccessDenied = syscall.Errno(5)
 	// elevatedWaitTimeout 等待提权子进程最长时长。
 	elevatedWaitTimeout = 60 * time.Second
+	// relaunchExitDelay 提权重启后旧实例退出前的延时，保证前端渲染出提示。
+	relaunchExitDelay = 800 * time.Millisecond
 )
+
+// isElevated 判断当前进程令牌是否已提权（管理员）。
+func isElevated() bool {
+	var token windows.Token
+	if err := windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_QUERY, &token); err != nil {
+		return false
+	}
+	defer token.Close()
+
+	var elevated uint32
+	var size uint32
+	if err := windows.GetTokenInformation(token, windows.TokenElevation, (*byte)(unsafe.Pointer(&elevated)), uint32(unsafe.Sizeof(elevated)), &size); err != nil {
+		return false
+	}
+	return elevated != 0
+}
+
+// relaunchElevated 以管理员身份重启应用本体：ShellExecuteEx(runas) 启动新实例（正常窗口，不等待），
+// 随后延时退出旧实例，避免重复实例冲突。用于切换到"整个系统"进程范围。
+func relaunchElevated() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("获取可执行路径失败: %w", err)
+	}
+	if err := shellExecuteRunAsNoWait(exe); err != nil {
+		return err
+	}
+	time.AfterFunc(relaunchExitDelay, func() {
+		application.Get().Quit()
+	})
+	return nil
+}
 
 // isAccessDenied 判断错误是否为权限不足。
 func isAccessDenied(err error) bool {
@@ -108,26 +143,27 @@ func runElevatedOp(op, name, location string) error {
 
 // shellExecuteInfoW 对应 Win32 SHELLEXECUTEINFOW。
 type shellExecuteInfoW struct {
-	CbSize       uint32
-	FMask        uint32
-	Hwnd         windows.Handle
-	LpVerb       *uint16
-	LpFile       *uint16
-	LpParameters *uint16
-	LpDirectory  *uint16
-	NShow        int32
-	HInstApp     windows.Handle
-	LpIDList     uintptr
-	LpClass      *uint16
-	HKeyClass    windows.Handle
-	DwHotKey     uint32
+	CbSize         uint32
+	FMask          uint32
+	Hwnd           windows.Handle
+	LpVerb         *uint16
+	LpFile         *uint16
+	LpParameters   *uint16
+	LpDirectory    *uint16
+	NShow          int32
+	HInstApp       windows.Handle
+	LpIDList       uintptr
+	LpClass        *uint16
+	HKeyClass      windows.Handle
+	DwHotKey       uint32
 	HIconOrMonitor windows.Handle
-	HProcess     windows.Handle
+	HProcess       windows.Handle
 }
 
 const (
 	seeMaskNoCloseProcess = 0x00000040
 	swHide                = 0
+	swShownormal          = 1 // SW_SHOWNORMAL：GUI 提权重启时正常显示窗口
 	errorCancelled        = syscall.Errno(1223)
 )
 
@@ -196,6 +232,39 @@ func shellExecuteRunAs(exe string, args []string) error {
 	if status == uint32(windows.WAIT_TIMEOUT) {
 		_ = windows.TerminateProcess(info.HProcess, 1)
 		return errors.New("提权操作超时")
+	}
+	return nil
+}
+
+// shellExecuteRunAsNoWait 通过 ShellExecuteEx(verb=runas) 以管理员身份启动自身 GUI（正常窗口）后立即返回，
+// 不等待子进程退出。用于提权重启应用本体。
+func shellExecuteRunAsNoWait(exe string) error {
+	verb, err := windows.UTF16PtrFromString("runas")
+	if err != nil {
+		return err
+	}
+	file, err := windows.UTF16PtrFromString(exe)
+	if err != nil {
+		return err
+	}
+	dir, err := windows.UTF16PtrFromString(filepath.Dir(exe))
+	if err != nil {
+		return err
+	}
+
+	info := &shellExecuteInfoW{
+		CbSize:      uint32(unsafe.Sizeof(shellExecuteInfoW{})),
+		LpVerb:      verb,
+		LpFile:      file,
+		LpDirectory: dir,
+		NShow:       swShownormal,
+	}
+	r1, _, callErr := procShellExecuteEx.Call(uintptr(unsafe.Pointer(info)))
+	if r1 == 0 {
+		if errors.Is(callErr, errorCancelled) {
+			return errors.New("已取消管理员授权")
+		}
+		return fmt.Errorf("提权启动失败: %w", callErr)
 	}
 	return nil
 }

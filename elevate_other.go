@@ -18,3 +18,13 @@ func runElevatedHelper(args []string) {
 func tryDirectOrElevate(directFn func() error, elevateOp, name, location string) error {
 	return errors.New("提权写操作目前只支持 Windows")
 }
+
+// isElevated 非 Windows 占位：始终返回 false。
+func isElevated() bool {
+	return false
+}
+
+// relaunchElevated 非 Windows 占位：不支持。
+func relaunchElevated() error {
+	return errors.New("提权重启目前只支持 Windows")
+}

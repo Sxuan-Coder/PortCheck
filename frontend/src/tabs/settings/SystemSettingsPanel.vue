@@ -1,27 +1,68 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { Dialogs } from '@wailsio/runtime'
+import { SettingsService } from '../../../bindings/github.com/Sxuan-Coder/PortCheck'
 import { SetInterval } from '../../../bindings/github.com/Sxuan-Coder/PortCheck/monitorservice'
 import { useSettings } from '../../composables/useSettings'
 import { useTheme } from '../../composables/useTheme'
+import { useToast } from '../../composables/useToast'
 
-const { theme, toggle } = useTheme()
-const { settings, load, save, setAutostart } = useSettings()
+const { theme } = useTheme()
+const { settings, load, save, setAutostart, setThemeMode } = useSettings()
+const { toast } = useToast()
 
 const autostartEnabled = ref(false)
+const changingScope = ref(false)
 
 onMounted(() => {
   load()
 })
 
-// 开关双向绑定辅助
+// 开关双向绑定辅助：读运行时主题（useTheme 反映界面真实状态），切换统一走 setThemeMode
 const themeChecked = computed({
-  get: () => settings.value.theme === 'light',
-  set: (v: boolean) => {
-    settings.value.theme = v ? 'light' : 'dark'
-    toggle() // 同步切换
-    save()
-  },
+  get: () => theme.value === 'light',
+  set: (v: boolean) => setThemeMode(v ? 'light' : 'dark'),
 })
+
+// 进程范围切换：system 需管理员权限并提权重启应用；currentUser 切回时若在管理员下仅提示。
+async function onScopeChange(v: 'currentUser' | 'system') {
+  if (changingScope.value || settings.value.processScope === v) return
+
+  if (v === 'system') {
+    const ans = await Dialogs.Question({
+      Title: '切换到整个系统进程',
+      Message: '查看 SYSTEM 等全部系统进程需要管理员权限，应用将以管理员身份自动重启。确认继续吗？',
+      Buttons: [
+        { Label: 'No', IsCancel: true },
+        { Label: 'Yes', IsDefault: true },
+      ],
+    })
+    if (ans !== 'Yes') {
+      settings.value.processScope = 'currentUser' // 回滚下拉显示
+      return
+    }
+    changingScope.value = true
+    settings.value.processScope = 'system'
+    await save()
+    try {
+      await SettingsService.RelaunchElevated()
+      toast('正在以管理员权限重启应用…', 'info')
+    } catch (e) {
+      settings.value.processScope = 'currentUser'
+      toast(e instanceof Error ? e.message : String(e), 'error')
+    } finally {
+      changingScope.value = false
+    }
+    return
+  }
+
+  // 切回当前用户
+  settings.value.processScope = 'currentUser'
+  await save()
+  if (await SettingsService.IsElevated()) {
+    toast('当前以管理员权限运行，如需仅查看当前用户进程，请以普通权限重新启动 PortCheck', 'info')
+  }
+}
 
 const intervalOptions = [
   { value: 500, label: '0.5s' },
@@ -93,6 +134,23 @@ async function onAutostartChange(v: boolean) {
         <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
         </option>
+      </select>
+    </div>
+
+    <!-- 进程范围 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">进程范围</span>
+        <span class="setting-desc">「整个系统」可查看 SYSTEM 等全部进程，需管理员权限并重启应用</span>
+      </div>
+      <select
+        class="setting-select"
+        :value="settings.processScope"
+        :disabled="changingScope"
+        @change="onScopeChange(($event.target as HTMLSelectElement).value as 'currentUser' | 'system')"
+      >
+        <option value="currentUser">当前用户</option>
+        <option value="system">整个系统</option>
       </select>
     </div>
 

@@ -22,6 +22,7 @@ pnpm-debug.log*
 # Local planning docs (not for remote)
 /docs/plan/
 /docs/superpowers/
+.zcode/
 
 # OS / editor
 .DS_Store

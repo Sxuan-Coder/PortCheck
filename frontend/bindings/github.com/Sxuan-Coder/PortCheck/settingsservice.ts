@@ -24,6 +24,21 @@ export function GetSettings(): $CancellablePromise<$models.Settings> {
 }
 
 /**
+ * IsElevated 返回当前进程是否以管理员权限运行（进程范围=system 的运行时前提）。
+ */
+export function IsElevated(): $CancellablePromise<boolean> {
+    return $Call.ByID(457530734);
+}
+
+/**
+ * RelaunchElevated 以管理员权限重启应用本体：runas 启动新实例后延时退出旧实例。
+ * 用于切换到"整个系统"进程范围；新实例以管理员身份启动后即可全量枚举进程。
+ */
+export function RelaunchElevated(): $CancellablePromise<void> {
+    return $Call.ByID(3205862940);
+}
+
+/**
  * SaveSettings 持久化设置到 JSON 文件。
  */
 export function SaveSettings(settings: $models.Settings): $CancellablePromise<void> {

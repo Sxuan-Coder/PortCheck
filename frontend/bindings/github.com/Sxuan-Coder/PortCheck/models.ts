@@ -220,6 +220,11 @@ export class Settings {
     "refreshIntervalMs": number;
     "language": string;
 
+    /**
+     * currentUser / system
+     */
+    "processScope": string;
+
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
         if (!("theme" in $$source)) {
@@ -230,6 +235,9 @@ export class Settings {
         }
         if (!("language" in $$source)) {
             this["language"] = "";
+        }
+        if (!("processScope" in $$source)) {
+            this["processScope"] = "";
         }
 
         Object.assign(this, $$source);

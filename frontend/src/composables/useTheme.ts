@@ -16,10 +16,13 @@ function apply(cls: Theme) {
 apply(theme.value)
 
 export function useTheme() {
-  function toggle() {
-    theme.value = theme.value === 'dark' ? 'light' : 'dark'
-    localStorage.setItem(THEME_KEY, theme.value)
-    apply(theme.value)
+  function set(cls: Theme) {
+    theme.value = cls
+    localStorage.setItem(THEME_KEY, cls)
+    apply(cls)
   }
-  return { theme, toggle }
+  function toggle() {
+    set(theme.value === 'dark' ? 'light' : 'dark')
+  }
+  return { theme, set, toggle }
 }

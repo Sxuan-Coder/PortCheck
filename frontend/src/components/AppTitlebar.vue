@@ -2,8 +2,10 @@
 import { Window } from '@wailsio/runtime'
 import AppIcon from './AppIcon.vue'
 import { useTheme } from '../composables/useTheme'
+import { useSettings } from '../composables/useSettings'
 
-const { theme, toggle } = useTheme()
+const { theme } = useTheme()
+const { setThemeMode } = useSettings()
 
 async function onMinimise() {
   try {
@@ -42,7 +44,7 @@ async function onClose() {
         class="ctl"
         style="--wails-draggable: no-drag"
         :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
-        @click="toggle"
+        @click="setThemeMode(theme === 'dark' ? 'light' : 'dark')"
       >
         <AppIcon :name="theme === 'dark' ? 'moon' : 'sun'" :size="13" />
       </button>

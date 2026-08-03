@@ -6,11 +6,18 @@ import (
 	"path/filepath"
 )
 
+// 进程范围枚举。
+const (
+	processScopeCurrentUser = "currentUser" // 仅当前用户（普通权限，保持现状）
+	processScopeSystem      = "system"      // 整个系统（需管理员权限，全量进程）
+)
+
 // Settings 是应用的用户可配置项。
 type Settings struct {
 	Theme             string `json:"theme"`
 	RefreshIntervalMs int    `json:"refreshIntervalMs"`
 	Language          string `json:"language"`
+	ProcessScope      string `json:"processScope"` // currentUser / system
 }
 
 // SettingsService 提供持久化配置读写与开机自启管理。
@@ -22,7 +29,16 @@ func DefaultSettings() Settings {
 		Theme:             "dark",
 		RefreshIntervalMs: 1000,
 		Language:          "zh-CN",
+		ProcessScope:      processScopeCurrentUser,
 	}
+}
+
+// normalizeProcessScope 校验进程范围枚举，非法值回退为默认。
+func normalizeProcessScope(v string) string {
+	if v == processScopeSystem {
+		return processScopeSystem
+	}
+	return processScopeCurrentUser
 }
 
 // settingsPath 返回 %APPDATA%/PortCheck/settings.json。
@@ -57,11 +73,13 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return DefaultSettings(), nil // 静默回退
 	}
+	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
 	return settings, nil
 }
 
 // SaveSettings 持久化设置到 JSON 文件。
 func (s *SettingsService) SaveSettings(settings Settings) error {
+	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
 	path, err := settingsPath()
 	if err != nil {
 		return err
@@ -71,4 +89,15 @@ func (s *SettingsService) SaveSettings(settings Settings) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// IsElevated 返回当前进程是否以管理员权限运行（进程范围=system 的运行时前提）。
+func (s *SettingsService) IsElevated() bool {
+	return isElevated()
+}
+
+// RelaunchElevated 以管理员权限重启应用本体：runas 启动新实例后延时退出旧实例。
+// 用于切换到"整个系统"进程范围；新实例以管理员身份启动后即可全量枚举进程。
+func (s *SettingsService) RelaunchElevated() error {
+	return relaunchElevated()
 }
