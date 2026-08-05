@@ -235,6 +235,16 @@ export class Settings {
      */
     "overlayPosition": string;
 
+    /**
+     * white/red/green/blue/yellow，默认 white
+     */
+    "overlayColor": string;
+
+    /**
+     * 10-18，默认 12
+     */
+    "overlayFontSize": number;
+
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
         if (!("theme" in $$source)) {
@@ -254,6 +264,12 @@ export class Settings {
         }
         if (!("overlayPosition" in $$source)) {
             this["overlayPosition"] = "";
+        }
+        if (!("overlayColor" in $$source)) {
+            this["overlayColor"] = "";
+        }
+        if (!("overlayFontSize" in $$source)) {
+            this["overlayFontSize"] = 0;
         }
 
         Object.assign(this, $$source);

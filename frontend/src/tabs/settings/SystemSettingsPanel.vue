@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import { Dialogs } from '@wailsio/runtime'
+import { Dialogs, Events } from '@wailsio/runtime'
 import { SettingsService } from '../../../bindings/github.com/Sxuan-Coder/PortCheck'
 import { SetInterval } from '../../../bindings/github.com/Sxuan-Coder/PortCheck/monitorservice'
 import { useSettings } from '../../composables/useSettings'
@@ -10,6 +10,21 @@ import { useToast } from '../../composables/useToast'
 const { theme } = useTheme()
 const { settings, load, save, setAutostart, setThemeMode, applyOverlay } = useSettings()
 const { toast } = useToast()
+
+// 悬浮窗外观预设：颜色与字号。id 与后端 settings.go 白名单一致。
+const overlayColorOptions = [
+  { value: 'white', label: '白色' },
+  { value: 'red', label: '红色' },
+  { value: 'green', label: '绿色' },
+  { value: 'blue', label: '蓝色' },
+  { value: 'yellow', label: '黄色' },
+]
+const overlayFontSizeOptions = [
+  { value: 10, label: '小' },
+  { value: 12, label: '中' },
+  { value: 14, label: '大' },
+  { value: 16, label: '特大' },
+]
 
 const autostartEnabled = ref(false)
 const changingScope = ref(false)
@@ -89,6 +104,29 @@ async function onOverlayToggle() {
 async function onOverlayPositionChange(e: Event) {
   settings.value.overlayPosition = (e.target as HTMLSelectElement).value as 'topLeft' | 'topRight'
   await applyOverlay()
+}
+
+// emitOverlayAppearance 把颜色/字号即时推送给悬浮窗窗口（独立 webview），并静默持久化。
+async function emitOverlayAppearance() {
+  Events.Emit('overlay:config', {
+    color: settings.value.overlayColor,
+    fontSize: settings.value.overlayFontSize,
+  })
+  try {
+    await SettingsService.SaveSettings(settings.value)
+  } catch {
+    /* 忽略持久化失败 */
+  }
+}
+
+async function onOverlayColorChange(e: Event) {
+  settings.value.overlayColor = (e.target as HTMLSelectElement).value as typeof settings.value.overlayColor
+  await emitOverlayAppearance()
+}
+
+async function onOverlayFontSizeChange(e: Event) {
+  settings.value.overlayFontSize = Number((e.target as HTMLSelectElement).value)
+  await emitOverlayAppearance()
 }
 </script>
 
@@ -197,6 +235,38 @@ async function onOverlayPositionChange(e: Event) {
       >
         <option value="topRight">右上角</option>
         <option value="topLeft">左上角</option>
+      </select>
+    </div>
+
+    <!-- 悬浮窗颜色 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">悬浮窗颜色</span>
+        <span class="setting-desc">悬浮窗文字颜色，仅在开启时生效</span>
+      </div>
+      <select
+        class="setting-select"
+        :value="settings.overlayColor"
+        :disabled="!settings.overlayEnabled"
+        @change="onOverlayColorChange"
+      >
+        <option v-for="opt in overlayColorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+    </div>
+
+    <!-- 悬浮窗字号 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">悬浮窗字号</span>
+        <span class="setting-desc">悬浮窗文字大小，仅在开启时生效</span>
+      </div>
+      <select
+        class="setting-select"
+        :value="settings.overlayFontSize"
+        :disabled="!settings.overlayEnabled"
+        @change="onOverlayFontSizeChange"
+      >
+        <option v-for="opt in overlayFontSizeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
     </div>
 

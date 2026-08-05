@@ -18,6 +18,22 @@ const (
 	overlayPositionTopRight = "topRight" // 屏幕右上角（默认）
 )
 
+// 性能悬浮窗颜色预设枚举（id），实际色值由前端映射，后端只做白名单校验。
+const (
+	overlayColorWhite  = "white"
+	overlayColorRed    = "red"
+	overlayColorGreen  = "green"
+	overlayColorBlue   = "blue"
+	overlayColorYellow = "yellow"
+)
+
+// overlayFontSizeMin/Max 限定悬浮窗字号区间，超界回退默认。
+const (
+	overlayFontSizeMin = 10
+	overlayFontSizeMax = 18
+	overlayFontSizeDef = 12
+)
+
 // Settings 是应用的用户可配置项。
 type Settings struct {
 	Theme             string `json:"theme"`
@@ -26,6 +42,8 @@ type Settings struct {
 	ProcessScope      string `json:"processScope"`    // currentUser / system
 	OverlayEnabled    bool   `json:"overlayEnabled"`  // 性能悬浮窗开关，默认关闭
 	OverlayPosition   string `json:"overlayPosition"` // topLeft / topRight，默认 topRight
+	OverlayColor      string `json:"overlayColor"`    // white/red/green/blue/yellow，默认 white
+	OverlayFontSize   int    `json:"overlayFontSize"` // 10-18，默认 12
 }
 
 // SettingsService 提供持久化配置读写与开机自启管理。
@@ -40,6 +58,8 @@ func DefaultSettings() Settings {
 		ProcessScope:      processScopeCurrentUser,
 		OverlayEnabled:    false,
 		OverlayPosition:   overlayPositionTopRight,
+		OverlayColor:      overlayColorWhite,
+		OverlayFontSize:   overlayFontSizeDef,
 	}
 }
 
@@ -57,6 +77,24 @@ func normalizeOverlayPosition(v string) string {
 		return overlayPositionTopLeft
 	}
 	return overlayPositionTopRight
+}
+
+// normalizeOverlayColor 校验悬浮窗颜色预设，非法值回退为 white。
+func normalizeOverlayColor(v string) string {
+	switch v {
+	case overlayColorWhite, overlayColorRed, overlayColorGreen, overlayColorBlue, overlayColorYellow:
+		return v
+	default:
+		return overlayColorWhite
+	}
+}
+
+// normalizeOverlayFontSize 校验悬浮窗字号区间，超界回退默认值。
+func normalizeOverlayFontSize(v int) int {
+	if v < overlayFontSizeMin || v > overlayFontSizeMax {
+		return overlayFontSizeDef
+	}
+	return v
 }
 
 // settingsPath 返回 %APPDATA%/PortCheck/settings.json。
@@ -93,6 +131,8 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	}
 	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
 	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
+	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
+	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
 	return settings, nil
 }
 
@@ -100,6 +140,8 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
 	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
+	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
+	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
 	path, err := settingsPath()
 	if err != nil {
 		return err
