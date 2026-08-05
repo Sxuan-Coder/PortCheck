@@ -40,7 +40,7 @@ const items: { id: string; icon: string; label: string }[] = [
       <button class="upd" title="检查更新" @click="checkUpdate()">
         <AppIcon name="refresh" :size="15" />
       </button>
-      <div class="ver">v2.3.0</div>
+      <div class="ver">v2.3.1</div>
     </div>
   </aside>
 </template>
