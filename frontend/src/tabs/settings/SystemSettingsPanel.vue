@@ -8,7 +8,7 @@ import { useTheme } from '../../composables/useTheme'
 import { useToast } from '../../composables/useToast'
 
 const { theme } = useTheme()
-const { settings, load, save, setAutostart, setThemeMode } = useSettings()
+const { settings, load, save, setAutostart, setThemeMode, applyOverlay } = useSettings()
 const { toast } = useToast()
 
 const autostartEnabled = ref(false)
@@ -81,6 +81,15 @@ async function onAutostartChange(v: boolean) {
   autostartEnabled.value = v
   await setAutostart(v)
 }
+
+async function onOverlayToggle() {
+  await applyOverlay()
+}
+
+async function onOverlayPositionChange(e: Event) {
+  settings.value.overlayPosition = (e.target as HTMLSelectElement).value as 'topLeft' | 'topRight'
+  await applyOverlay()
+}
 </script>
 
 <template>
@@ -151,6 +160,43 @@ async function onAutostartChange(v: boolean) {
       >
         <option value="currentUser">当前用户</option>
         <option value="system">整个系统</option>
+      </select>
+    </div>
+
+    <!-- 性能悬浮窗 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">性能悬浮窗</span>
+        <span class="setting-desc">在屏幕角落常驻显示 CPU / 内存 / 提交内存，主窗口最小化后仍保持</span>
+      </div>
+      <label class="switch" :class="{ on: settings.overlayEnabled }">
+        <input
+          type="checkbox"
+          class="switch-input"
+          v-model="settings.overlayEnabled"
+          @change="onOverlayToggle"
+        />
+        <span class="switch-track">
+          <span class="switch-thumb" />
+        </span>
+        <span class="switch-text">{{ settings.overlayEnabled ? '开' : '关' }}</span>
+      </label>
+    </div>
+
+    <!-- 悬浮窗位置 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">悬浮窗位置</span>
+        <span class="setting-desc">仅在悬浮窗开启时生效</span>
+      </div>
+      <select
+        class="setting-select"
+        :value="settings.overlayPosition"
+        :disabled="!settings.overlayEnabled"
+        @change="onOverlayPositionChange"
+      >
+        <option value="topRight">右上角</option>
+        <option value="topLeft">左上角</option>
       </select>
     </div>
 

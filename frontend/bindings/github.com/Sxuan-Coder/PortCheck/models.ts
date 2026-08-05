@@ -225,6 +225,16 @@ export class Settings {
      */
     "processScope": string;
 
+    /**
+     * 性能悬浮窗开关，默认关闭
+     */
+    "overlayEnabled": boolean;
+
+    /**
+     * topLeft / topRight，默认 topRight
+     */
+    "overlayPosition": string;
+
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
         if (!("theme" in $$source)) {
@@ -238,6 +248,12 @@ export class Settings {
         }
         if (!("processScope" in $$source)) {
             this["processScope"] = "";
+        }
+        if (!("overlayEnabled" in $$source)) {
+            this["overlayEnabled"] = false;
+        }
+        if (!("overlayPosition" in $$source)) {
+            this["overlayPosition"] = "";
         }
 
         Object.assign(this, $$source);

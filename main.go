@@ -36,6 +36,7 @@ func main() {
 			application.NewService(&StartupService{}),
 			application.NewService(&UpdateService{}),
 			application.NewService(&SettingsService{}),
+			application.NewService(&OverlayService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

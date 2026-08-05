@@ -23,6 +23,7 @@ pnpm-debug.log*
 /docs/plan/
 /docs/superpowers/
 .zcode/
+.claude/
 
 # OS / editor
 .DS_Store

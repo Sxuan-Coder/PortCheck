@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { SettingsService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
+import { Apply as ApplyOverlay } from '../../bindings/github.com/Sxuan-Coder/PortCheck/overlayservice'
 import { useTheme } from './useTheme'
 import { useToast } from './useToast'
 
@@ -8,6 +9,8 @@ export interface AppSettings {
   refreshIntervalMs: number
   language: string
   processScope: 'currentUser' | 'system'
+  overlayEnabled: boolean
+  overlayPosition: 'topLeft' | 'topRight'
 }
 
 const settings = ref<AppSettings>({
@@ -15,6 +18,8 @@ const settings = ref<AppSettings>({
   refreshIntervalMs: 1000,
   language: 'zh-CN',
   processScope: 'currentUser',
+  overlayEnabled: false,
+  overlayPosition: 'topRight',
 })
 
 const loaded = ref(false)
@@ -32,6 +37,8 @@ export function useSettings() {
         refreshIntervalMs: s.refreshIntervalMs || 1000,
         language: s.language || 'zh-CN',
         processScope: s.processScope === 'system' ? 'system' : 'currentUser',
+        overlayEnabled: !!s.overlayEnabled,
+        overlayPosition: s.overlayPosition === 'topLeft' ? 'topLeft' : 'topRight',
       }
       loaded.value = true
 
@@ -77,5 +84,16 @@ export function useSettings() {
     }
   }
 
-  return { settings, loaded, load, save, setAutostart, setThemeMode }
+  // applyOverlay 同步悬浮窗运行时状态并静默持久化（不弹"设置已保存" toast，避免打扰）。
+  // 由设置页开关 / 位置下拉调用，立即生效。
+  async function applyOverlay() {
+    try {
+      await ApplyOverlay(settings.value.overlayEnabled, settings.value.overlayPosition)
+      await SettingsService.SaveSettings(settings.value)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), 'error')
+    }
+  }
+
+  return { settings, loaded, load, save, setAutostart, setThemeMode, applyOverlay }
 }

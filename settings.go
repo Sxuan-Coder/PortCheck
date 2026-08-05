@@ -12,12 +12,20 @@ const (
 	processScopeSystem      = "system"      // 整个系统（需管理员权限，全量进程）
 )
 
+// 性能悬浮窗位置枚举。
+const (
+	overlayPositionTopLeft  = "topLeft"  // 屏幕左上角
+	overlayPositionTopRight = "topRight" // 屏幕右上角（默认）
+)
+
 // Settings 是应用的用户可配置项。
 type Settings struct {
 	Theme             string `json:"theme"`
 	RefreshIntervalMs int    `json:"refreshIntervalMs"`
 	Language          string `json:"language"`
-	ProcessScope      string `json:"processScope"` // currentUser / system
+	ProcessScope      string `json:"processScope"`    // currentUser / system
+	OverlayEnabled    bool   `json:"overlayEnabled"`  // 性能悬浮窗开关，默认关闭
+	OverlayPosition   string `json:"overlayPosition"` // topLeft / topRight，默认 topRight
 }
 
 // SettingsService 提供持久化配置读写与开机自启管理。
@@ -30,6 +38,8 @@ func DefaultSettings() Settings {
 		RefreshIntervalMs: 1000,
 		Language:          "zh-CN",
 		ProcessScope:      processScopeCurrentUser,
+		OverlayEnabled:    false,
+		OverlayPosition:   overlayPositionTopRight,
 	}
 }
 
@@ -39,6 +49,14 @@ func normalizeProcessScope(v string) string {
 		return processScopeSystem
 	}
 	return processScopeCurrentUser
+}
+
+// normalizeOverlayPosition 校验悬浮窗位置枚举，非法值回退为 topRight。
+func normalizeOverlayPosition(v string) string {
+	if v == overlayPositionTopLeft {
+		return overlayPositionTopLeft
+	}
+	return overlayPositionTopRight
 }
 
 // settingsPath 返回 %APPDATA%/PortCheck/settings.json。
@@ -74,12 +92,14 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 		return DefaultSettings(), nil // 静默回退
 	}
 	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
+	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
 	return settings, nil
 }
 
 // SaveSettings 持久化设置到 JSON 文件。
 func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
+	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
 	path, err := settingsPath()
 	if err != nil {
 		return err
