@@ -37,7 +37,7 @@ const items: { id: string; icon: string; label: string }[] = [
       <button class="upd" title="设置" @click="$emit('switch', 'settings')">
         <AppIcon name="settings" :size="18" />
       </button>
-      <button class="upd" title="检查更新" @click="checkUpdate">
+      <button class="upd" title="检查更新" @click="checkUpdate()">
         <AppIcon name="refresh" :size="15" />
       </button>
       <div class="ver">v2.3.0</div>

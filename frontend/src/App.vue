@@ -1,22 +1,32 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import AppTitlebar from './components/AppTitlebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import MiniChart from './components/MiniChart.vue'
 import QuickCommand from './components/QuickCommand.vue'
 import ToastHost from './components/ToastHost.vue'
+import UpdateDialog from './components/UpdateDialog.vue'
 import ProcessesTab from './tabs/ProcessesTab.vue'
 import PerformanceTab from './tabs/PerformanceTab.vue'
 import PortsTab from './tabs/PortsTab.vue'
 import ServicesTab from './tabs/ServicesTab.vue'
 import StartupTab from './tabs/StartupTab.vue'
 import SettingsTab from './tabs/SettingsTab.vue'
+import { checkUpdate } from './composables/useUpdate'
 
 const active = ref('processes')
 
 function onSwitch(tab: string) {
   active.value = tab
 }
+
+// 启动后后台静默检查一次更新：延迟 1.5s，让 monitor 订阅与首屏先完成；
+// 仅在确认有新版本时才会弹出 UpdateDialog，无更新或网络异常都静默不打扰用户。
+onMounted(() => {
+  window.setTimeout(() => {
+    checkUpdate(true)
+  }, 1500)
+})
 </script>
 
 <template>
@@ -40,6 +50,7 @@ function onSwitch(tab: string) {
     </main>
 
     <ToastHost />
+    <UpdateDialog />
   </div>
 </template>
 

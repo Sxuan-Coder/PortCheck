@@ -17,7 +17,7 @@ defineProps<{ name: string; size?: number }>()
     class="icon"
     aria-hidden="true"
   >
-    <!-- 进程 / 性能 / 端口 / 服务 / 启动 / 设置 / 月 / 日 / 关闭 / 最小 / 最大化 / 搜索 / 终端 / 刷新 / 齿轮 / 芯片 / 内存 / 三点 -->
+    <!-- 进程 / 性能 / 端口 / 服务 / 启动 / 设置 / 月 / 日 / 关闭 / 最小 / 最大化 / 搜索 / 终端 / 刷新 / 下载 / 禁止 / 芯片 / 内存 / 三点 -->
     <template v-if="name === 'process'">
       <rect x="4" y="4" width="16" height="16" rx="2" />
       <rect x="9" y="9" width="6" height="6" />
@@ -74,6 +74,10 @@ defineProps<{ name: string; size?: number }>()
     <template v-else-if="name === 'refresh'">
       <path d="M23 4v6h-6M1 20v-6h6" />
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </template>
+    <template v-else-if="name === 'download'">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5M12 15V3" />
     </template>
     <template v-else-if="name === 'ban'">
       <circle cx="12" cy="12" r="9" />

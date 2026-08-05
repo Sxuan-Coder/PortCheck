@@ -53,7 +53,7 @@ function openIssues() {
       <div class="card-title">更新</div>
       <div class="update-row">
         <span class="update-info" v-if="!loading">当前版本 v{{ version }}</span>
-        <button class="btn-primary" @click="checkUpdate">
+        <button class="btn-primary" @click="checkUpdate()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 4v6h-6M1 20v-6h6" />
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
