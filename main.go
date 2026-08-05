@@ -4,6 +4,7 @@ import (
 	"embed"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -14,6 +15,9 @@ var assets embed.FS
 
 //go:embed build/appicon.png
 var appIcon []byte
+
+// overlaySvc 作为包级变量，便于在主窗口导航完成后调用 RestoreIfEnabled 恢复悬浮窗。
+var overlaySvc OverlayService
 
 func main() {
 	// 提权子进程模式：不启动 GUI，执行单次写操作后立即退出。
@@ -36,7 +40,7 @@ func main() {
 			application.NewService(&StartupService{}),
 			application.NewService(&UpdateService{}),
 			application.NewService(&SettingsService{}),
-			application.NewService(&OverlayService{}),
+			application.NewService(&overlaySvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -61,6 +65,15 @@ func main() {
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		window.Hide()
 		event.Cancel()
+	})
+
+	// 主窗口 WebView 导航完成后再恢复悬浮窗，避免启动期主窗口与悬浮窗两个 WebView2
+	// 同时冷启动争抢资源导致主窗口白屏。WebView 每次导航都会触发，用 Once 兜底只恢复一次。
+	var overlayRestored sync.Once
+	window.RegisterHook(events.Windows.WebViewNavigationCompleted, func(event *application.WindowEvent) {
+		overlayRestored.Do(func() {
+			overlaySvc.RestoreIfEnabled()
+		})
 	})
 
 	// 系统托盘：双击唤起主面板，右键菜单提供显示/退出。

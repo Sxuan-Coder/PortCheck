@@ -20,3 +20,11 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 export function Apply(enabled: boolean, position: string): $CancellablePromise<void> {
     return $Call.ByID(1908243403, enabled, position);
 }
+
+/**
+ * RestoreIfEnabled 在主窗口前端加载完成后恢复悬浮窗。
+ * 仅在启动时记录了恢复意图时生效，调用一次后清空标记，防止重复触发。
+ */
+export function RestoreIfEnabled(): $CancellablePromise<void> {
+    return $Call.ByID(3917557527);
+}

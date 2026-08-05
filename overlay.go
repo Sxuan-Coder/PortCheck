@@ -28,8 +28,14 @@ type OverlayService struct {
 	position string
 }
 
-// ServiceStartup 在应用启动时读取持久化设置，若用户上次开启了悬浮窗则自动恢复，
-// 实现「开机/启动即恢复上次悬浮窗状态」。
+// pendingRestore 标记启动时读到的「需要恢复悬浮窗」意图。
+// 真正的创建推迟到主窗口 WebView 导航完成（见 main.go 的 RestoreIfEnabled 调用），
+// 避免启动期主窗口与悬浮窗两个 WebView2 同时冷启动、争抢同一 WebView2 环境/资源
+// 导致主窗口首帧白屏（表现为开启悬浮窗后下次启动主窗口无页面）。
+var pendingRestore bool
+
+// ServiceStartup 在应用启动时读取持久化设置，仅记录恢复意图，不立即创建窗口。
+// 窗口创建由 main.go 在主窗口 NavigationCompleted 后调用 RestoreIfEnabled 触发。
 func (s *OverlayService) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
 	ss := &SettingsService{}
 	settings, err := ss.GetSettings()
@@ -37,9 +43,20 @@ func (s *OverlayService) ServiceStartup(_ context.Context, _ application.Service
 		return nil // 读不到设置时静默跳过，不阻塞启动
 	}
 	if settings.OverlayEnabled {
-		_ = s.Apply(true, settings.OverlayPosition)
+		s.position = normalizeOverlayPosition(settings.OverlayPosition)
+		pendingRestore = true
 	}
 	return nil
+}
+
+// RestoreIfEnabled 在主窗口前端加载完成后恢复悬浮窗。
+// 仅在启动时记录了恢复意图时生效，调用一次后清空标记，防止重复触发。
+func (s *OverlayService) RestoreIfEnabled() {
+	if !pendingRestore {
+		return
+	}
+	pendingRestore = false
+	_ = s.Apply(true, s.position)
 }
 
 // Apply 是前端可调用的 RPC：按 (enabled, position) 创建 / 移动 / 关闭悬浮窗。
