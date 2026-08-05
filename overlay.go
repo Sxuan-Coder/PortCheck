@@ -95,6 +95,9 @@ func (s *OverlayService) Apply(enabled bool, position string) error {
 			AlwaysOnTop:      true,
 			DisableResize:    true,
 			Hidden:           true, // 先隐藏创建，避免首帧白闪，随后显式 Show
+			Windows: application.WindowsWindow{
+				HiddenOnTaskbar: true, // 悬浮窗为辅助小窗，不在任务栏占位
+			},
 			BackgroundType:   application.BackgroundTypeTransparent,
 			BackgroundColour: application.NewRGBA(0, 0, 0, 0),
 			URL:              overlayURL,
