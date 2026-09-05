@@ -37,7 +37,7 @@ const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.
           {{ meta().short }}
         </span>
         <div class="names">
-          <div class="name">{{ account.name }}</div>
+          <div class="name">{{ account.name || meta().label }}</div>
           <div class="sub">
             {{ meta().label }}
             <span v-if="usage?.planName" class="plan">{{ usage.planName }}</span>

@@ -4,7 +4,7 @@ import { Events } from '@wailsio/runtime'
 import { CodingPlanService, SettingsService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
 import { SetUsageRows } from '../../bindings/github.com/Sxuan-Coder/PortCheck/overlayservice'
 import type { CodingPlanAccount, CodingPlanQuota, CodingPlanUsage } from '../../bindings/github.com/Sxuan-Coder/PortCheck/models.js'
-import { usageLevel, LEVEL_COLOR, countdown } from '../lib/codingplans'
+import { usageLevel, LEVEL_COLOR, countdown, providerMeta } from '../lib/codingplans'
 
 // 用量悬浮窗：Coding Plan 圆环图表视图，透明背景置顶。
 // 每个账号一行：左侧圆环显示 5 小时窗口百分比（已用/剩余由设置项 usageOverlayMode
@@ -162,7 +162,7 @@ const cancelUsageConfig = Events.On('usage-overlay:config', onUsageConfig)
         </text>
       </svg>
       <div class="txt">
-        <div class="name">{{ a.name }}</div>
+        <div class="name">{{ a.name || providerMeta(a.provider).label }}</div>
         <div class="sub">{{ line2(usages[a.id]) }}</div>
       </div>
     </div>

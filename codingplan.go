@@ -116,6 +116,9 @@ func (s *CodingPlanService) SaveCodingPlan(account CodingPlanAccount) (CodingPla
 	account.APIKey = strings.TrimSpace(account.APIKey)
 	account.BaseURL = strings.TrimSpace(account.BaseURL)
 	account.Name = strings.TrimSpace(account.Name)
+	if account.Name == "" {
+		account.Name = codingPlanProviderLabel(account.Provider)
+	}
 	if account.APIKey == "" {
 		return account, errors.New("API Key 不能为空")
 	}
