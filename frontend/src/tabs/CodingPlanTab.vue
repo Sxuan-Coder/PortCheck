@@ -37,6 +37,13 @@ async function load() {
   }
 }
 
+// broadcastUsages 把最新用量经事件推送给用量悬浮窗（独立 webview），
+// 载荷形如 { usages: Record<账号ID, 用量> }，悬浮窗直接采用、无需重新请求接口。
+// 主窗口每次刷新（定时/手动/保存后单查）都广播，保证两边数据始终同步。
+function broadcastUsages(map: Record<string, CodingPlanUsage>) {
+  Events.Emit('codingplan:changed', { usages: map })
+}
+
 // 并发查询全部账号；单账号失败不中断其它账号，失败卡片由自身 error 态展示。
 async function refreshAll(manual = false) {
   if (refreshing.value || accounts.value.length === 0) return
@@ -54,6 +61,7 @@ async function refreshAll(manual = false) {
   usages.value = map
   lastRefresh.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   refreshing.value = false
+  broadcastUsages(map)
   if (manual) {
     const failed = accounts.value.filter((a) => map[a.id] && map[a.id].status !== 'ok').length
     toast(failed > 0 ? `已刷新，${failed} 个账号查询失败` : '已刷新全部账号用量', failed > 0 ? 'error' : 'success')

@@ -96,8 +96,18 @@ const line2 = (u: CodingPlanUsage | null | undefined) => {
   return '无配额数据'
 }
 
-function onChanged() {
-  refresh()
+// 主窗口事件分两类载荷：
+//   - { usages: map }：主窗口刷新拿到最新用量，直接采用，不重复请求接口
+//   - 无载荷：账号增删，需要重新拉账号列表并全量查询
+function onChanged(ev: any) {
+  const raw = ev && ev.data ? ev.data : ev
+  const payload = raw && typeof raw === 'object' ? raw : null
+  if (payload && payload.usages && typeof payload.usages === 'object') {
+    usages.value = payload.usages as Record<string, CodingPlanUsage>
+    syncRows()
+  } else {
+    refresh()
+  }
 }
 
 // 设置页切换显示模式时实时推送（载荷兼容 ev.data 包装形态）。
