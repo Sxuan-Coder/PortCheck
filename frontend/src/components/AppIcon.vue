@@ -91,6 +91,23 @@ defineProps<{ name: string; size?: number }>()
       <rect x="2" y="6" width="20" height="12" rx="2" />
       <path d="M6 10v4M10 10v4M14 10v4M18 10v4" />
     </template>
+    <template v-else-if="name === 'usage'">
+      <path d="M4 15a8 8 0 0 1 16 0" />
+      <path d="M12 15l4-4" />
+      <circle cx="12" cy="15" r="1" />
+    </template>
+    <template v-else-if="name === 'plus'">
+      <path d="M12 5v14M5 12h14" />
+    </template>
+    <template v-else-if="name === 'edit'">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </template>
+    <template v-else-if="name === 'trash'">
+      <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </template>
     <template v-else>
       <circle cx="12" cy="12" r="9" />
     </template>

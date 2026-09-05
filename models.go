@@ -53,6 +53,35 @@ type StartupOpResult struct {
 	Message string `json:"message"`
 }
 
+// CodingPlanAccount 描述一条 Coding Plan 用量监控账号的配置。
+type CodingPlanAccount struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`     // 显示名，留空时由前端回退为供应商名
+	Provider  string `json:"provider"` // zhipu / kimi / minimax / zenmux
+	BaseURL   string `json:"baseUrl"`  // zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站
+	APIKey    string `json:"apiKey"`
+	CreatedAt int64  `json:"createdAt"`
+}
+
+// CodingPlanQuota 描述一个用量窗口（5 小时 / 周）的百分比与重置时间。
+type CodingPlanQuota struct {
+	UsedPercent float64 `json:"usedPercent"` // 已用百分比（0-100 基准；超界不裁剪，展示策略交给前端）
+	ResetsAt    string  `json:"resetsAt"`    // 重置时间 ISO 8601，空表示未知
+	UsedLabel   string  `json:"usedLabel"`   // 补充用量文本（如 ZenMux 的 "$3.20 / $7.50"），无则空
+}
+
+// CodingPlanUsage 是单账号一次用量查询的结果；失败不返回 Go 错误，
+// 而是 Status=expired/error + Error 带原因，便于前端按卡片展示失败态。
+type CodingPlanUsage struct {
+	AccountID string           `json:"accountId"`
+	PlanName  string           `json:"planName"` // 套餐等级（Lite/Pro/Max 等），无则空
+	Status    string           `json:"status"`   // ok / expired / error
+	FiveHour  *CodingPlanQuota `json:"fiveHour"` // 5 小时窗口；nil 表示无该桶
+	Weekly    *CodingPlanQuota `json:"weekly"`   // 周（7 天）窗口；nil 表示套餐无周限额
+	Error     string           `json:"error"`
+	QueriedAt int64            `json:"queriedAt"`
+}
+
 // MonitorTick 是后端单 ticker 每秒组装并一次性推送给前端的合并载荷，
 // 避免前端为进程/性能/端口分别发起高频 RPC。
 type MonitorTick struct {
@@ -67,3 +96,6 @@ type ServicesService struct{}
 
 // StartupService 提供开机启动项枚举与删除/禁用/启用（v2）。
 type StartupService struct{}
+
+// CodingPlanService 提供 Coding Plan 账号配置管理与用量查询。
+type CodingPlanService struct{}

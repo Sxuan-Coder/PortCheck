@@ -11,6 +11,7 @@ import PerformanceTab from './tabs/PerformanceTab.vue'
 import PortsTab from './tabs/PortsTab.vue'
 import ServicesTab from './tabs/ServicesTab.vue'
 import StartupTab from './tabs/StartupTab.vue'
+import CodingPlanTab from './tabs/CodingPlanTab.vue'
 import SettingsTab from './tabs/SettingsTab.vue'
 import { checkUpdate } from './composables/useUpdate'
 
@@ -43,6 +44,7 @@ onMounted(() => {
         <PortsTab v-show="active === 'ports'" />
         <ServicesTab v-if="active === 'services'" />
         <StartupTab v-if="active === 'startup'" />
+        <CodingPlanTab v-if="active === 'codingplan'" />
         <SettingsTab v-if="active === 'settings'" />
       </section>
 

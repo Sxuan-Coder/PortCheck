@@ -38,6 +38,7 @@ func main() {
 			application.NewService(&MonitorService{}),
 			application.NewService(&ServicesService{}),
 			application.NewService(&StartupService{}),
+			application.NewService(&CodingPlanService{}),
 			application.NewService(&UpdateService{}),
 			application.NewService(&SettingsService{}),
 			application.NewService(&overlaySvc),

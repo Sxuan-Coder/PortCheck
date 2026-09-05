@@ -5,6 +5,178 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+/**
+ * CodingPlanAccount 描述一条 Coding Plan 用量监控账号的配置。
+ */
+export class CodingPlanAccount {
+    "id": string;
+
+    /**
+     * 显示名，留空时由前端回退为供应商名
+     */
+    "name": string;
+
+    /**
+     * zhipu / kimi / minimax / zenmux
+     */
+    "provider": string;
+
+    /**
+     * zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站
+     */
+    "baseUrl": string;
+    "apiKey": string;
+    "createdAt": number;
+
+    /** Creates a new CodingPlanAccount instance. */
+    constructor($$source: Partial<CodingPlanAccount> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("provider" in $$source)) {
+            this["provider"] = "";
+        }
+        if (!("baseUrl" in $$source)) {
+            this["baseUrl"] = "";
+        }
+        if (!("apiKey" in $$source)) {
+            this["apiKey"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CodingPlanAccount instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CodingPlanAccount {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CodingPlanAccount($$parsedSource as Partial<CodingPlanAccount>);
+    }
+}
+
+/**
+ * CodingPlanQuota 描述一个用量窗口（5 小时 / 周）的百分比与重置时间。
+ */
+export class CodingPlanQuota {
+    /**
+     * 已用百分比（0-100 基准；超界不裁剪，展示策略交给前端）
+     */
+    "usedPercent": number;
+
+    /**
+     * 重置时间 ISO 8601，空表示未知
+     */
+    "resetsAt": string;
+
+    /**
+     * 补充用量文本（如 ZenMux 的 "$3.20 / $7.50"），无则空
+     */
+    "usedLabel": string;
+
+    /** Creates a new CodingPlanQuota instance. */
+    constructor($$source: Partial<CodingPlanQuota> = {}) {
+        if (!("usedPercent" in $$source)) {
+            this["usedPercent"] = 0;
+        }
+        if (!("resetsAt" in $$source)) {
+            this["resetsAt"] = "";
+        }
+        if (!("usedLabel" in $$source)) {
+            this["usedLabel"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CodingPlanQuota instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CodingPlanQuota {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CodingPlanQuota($$parsedSource as Partial<CodingPlanQuota>);
+    }
+}
+
+/**
+ * CodingPlanUsage 是单账号一次用量查询的结果；失败不返回 Go 错误，
+ * 而是 Status=expired/error + Error 带原因，便于前端按卡片展示失败态。
+ */
+export class CodingPlanUsage {
+    "accountId": string;
+
+    /**
+     * 套餐等级（Lite/Pro/Max 等），无则空
+     */
+    "planName": string;
+
+    /**
+     * ok / expired / error
+     */
+    "status": string;
+
+    /**
+     * 5 小时窗口；nil 表示无该桶
+     */
+    "fiveHour": CodingPlanQuota | null;
+
+    /**
+     * 周（7 天）窗口；nil 表示套餐无周限额
+     */
+    "weekly": CodingPlanQuota | null;
+    "error": string;
+    "queriedAt": number;
+
+    /** Creates a new CodingPlanUsage instance. */
+    constructor($$source: Partial<CodingPlanUsage> = {}) {
+        if (!("accountId" in $$source)) {
+            this["accountId"] = "";
+        }
+        if (!("planName" in $$source)) {
+            this["planName"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("fiveHour" in $$source)) {
+            this["fiveHour"] = null;
+        }
+        if (!("weekly" in $$source)) {
+            this["weekly"] = null;
+        }
+        if (!("error" in $$source)) {
+            this["error"] = "";
+        }
+        if (!("queriedAt" in $$source)) {
+            this["queriedAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CodingPlanUsage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CodingPlanUsage {
+        const $$createField3_0 = $$createType1;
+        const $$createField4_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("fiveHour" in $$parsedSource) {
+            $$parsedSource["fiveHour"] = $$createField3_0($$parsedSource["fiveHour"]);
+        }
+        if ("weekly" in $$parsedSource) {
+            $$parsedSource["weekly"] = $$createField4_0($$parsedSource["weekly"]);
+        }
+        return new CodingPlanUsage($$parsedSource as Partial<CodingPlanUsage>);
+    }
+}
+
 export class KillProcessResult {
     "pid": number;
     "message": string;
@@ -119,8 +291,8 @@ export class PortListResult {
      * Creates a new PortListResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PortListResult {
-        const $$createField0_0 = $$createType1;
-        const $$createField5_0 = $$createType2;
+        const $$createField0_0 = $$createType3;
+        const $$createField5_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ports" in $$parsedSource) {
             $$parsedSource["ports"] = $$createField0_0($$parsedSource["ports"]);
@@ -440,6 +612,8 @@ export class UpdateInfo {
 }
 
 // Private type creation functions
-const $$createType0 = PortEntry.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $Create.Array($Create.Any);
+const $$createType0 = CodingPlanQuota.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = PortEntry.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = $Create.Array($Create.Any);

@@ -11,6 +11,7 @@ const items: { id: string; icon: string; label: string }[] = [
   { id: 'ports', icon: 'ports', label: '端口查看' },
   { id: 'services', icon: 'services', label: '系统服务' },
   { id: 'startup', icon: 'startup', label: '开机启动' },
+  { id: 'codingplan', icon: 'usage', label: '用量查询' },
 ]
 </script>
 
