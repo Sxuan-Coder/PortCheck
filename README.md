@@ -4,12 +4,18 @@
 [![Wails](https://img.shields.io/badge/Wails-v3-E55353?logo=wails&logoColor=white)](https://v3.wails.io)
 [![Vue](https://img.shields.io/badge/Vue.js-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Version](https://img.shields.io/badge/version-2.3.1-14b8a6)](#)
+[![Version](https://img.shields.io/badge/version-2.4.0-14b8a6)](#)
 [![下载](https://img.shields.io/badge/下载-Releases-2158FF?logo=github&logoColor=white)](https://github.com/Sxuan-Coder/PortCheck/releases/latest)
 
 PortCheck 是一款面向 Windows 的**轻量任务管理工具**，聚焦日常系统维护与开发者本地排查场景：进程、性能、端口、服务、启动项一览，提供更直接的查看与操作体验。
 
 > 本地服务端口被谁占了？Codex / cc 帮你开了一堆后台开发服务器没关？一眼看清 Node.js、Java、Python、Go 进程，确认后即可结束。
+
+## ✨ v2.4 更新
+
+- **Coding Plan 用量查询**：新增「用量查询」页，对接智谱 GLM（国内/国际）、Kimi For Coding、MiniMax（国内/国际）、ZenMux 四家用量接口，展示 5 小时窗口 / 周用量百分比与重置倒计时；账号配置持久化在本地，支持多账号与备注名。
+- **用量悬浮窗**：桌面常驻圆环图表，按用量分级着色（<70% 绿 / 70-89% 橙 / ≥90% 红），高度随账号数自适应；与性能悬浮窗同角自动错开；支持「已用 / 剩余」百分比显示模式；添加首个账号时自动开启，与主窗口数据实时同步。
+- **设置页分组**：按 通用 / 进程 / 性能悬浮窗 / 用量悬浮窗 分组呈现，配置项一目了然。
 
 ## ✨ v2.2 更新
 
@@ -65,6 +71,7 @@ v2.0 从单一的端口查看器升级为完整的任务管理器，并全面重
 - **端口**：本机 TCP / UDP 端口，含本地地址、远程地址、TCP 状态、PID、进程名与进程路径；按端口 / 进程名 / PID / 地址 / 路径搜索；按协议与状态筛选；按进程类型筛选；确认后结束占用端口的进程。
 - **服务**：枚举所有 Windows 服务的名称、显示名、状态、类型；确认后可停止/启动（关键服务受保护，权限不足时按需 UAC 提权）。
 - **启动项**：枚举开机启动程序的名称、命令、来源与启用/禁用状态；确认后可禁用/启用/删除（HKLM 等需管理员时按需 UAC 提权）。
+- **用量查询**：Coding Plan（智谱 GLM / Kimi / MiniMax / ZenMux）的 5 小时窗口与周用量百分比、重置倒计时；多账号管理，配套桌面用量悬浮窗（圆环图表，支持已用/剩余显示）。
 - **速启指令 / 系统托盘 / 明暗主题**。
 
 ## 安全说明
@@ -149,12 +156,15 @@ go test ./...
 ├── monitor.go / monitor_*.go   # MonitorService：1s 批量事件推送（进程+性能+端口统计）
 ├── services_windows.go         # Windows 服务枚举与停止/启动
 ├── startup_windows.go          # 启动项枚举与删除/禁用/启用
+├── codingplan.go               # Coding Plan 用量查询（智谱/Kimi/MiniMax/ZenMux）与账号配置
+├── overlay.go                  # 性能/用量悬浮窗生命周期与定位
+├── settings.go                 # 用户设置持久化
 ├── elevate_windows.go          # 按需 UAC 提权（runas + 结果文件）
 ├── icon_windows.go             # 应用图标提取（启动项/进程）
 ├── update.go                   # 检查更新
 ├── frontend/                   # Vue3 + 纯 CSS 前端
-│   ├── src/tabs/               # 进程/性能/端口/服务/启动项 五个视图
-│   ├── src/components/         # 标题栏/侧栏/迷你图/速启/Toast
+│   ├── src/tabs/               # 进程/性能/端口/服务/启动项/用量查询 视图
+│   ├── src/components/         # 标题栏/侧栏/迷你图/速启/Toast/用量卡片/悬浮窗
 │   └── src/composables/        # monitor/theme/toast/update/虚拟滚动
 ├── build/                      # Wails 构建配置与图标
 └── Taskfile.yml                # Wails 任务入口
