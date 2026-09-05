@@ -15,6 +15,7 @@ export interface AppSettings {
   overlayFontSize: number
   usageOverlayEnabled: boolean
   usageOverlayPosition: 'topLeft' | 'topRight'
+  usageOverlayMode: 'used' | 'remaining'
 }
 
 const settings = ref<AppSettings>({
@@ -28,6 +29,7 @@ const settings = ref<AppSettings>({
   overlayFontSize: 12,
   usageOverlayEnabled: false,
   usageOverlayPosition: 'topRight',
+  usageOverlayMode: 'used',
 })
 
 // loaded 标记后端配置是否已成功加载到内存。save/applyOverlay 前必须为 true，
@@ -63,6 +65,7 @@ export function useSettings() {
           : 12,
         usageOverlayEnabled: !!s.usageOverlayEnabled,
         usageOverlayPosition: s.usageOverlayPosition === 'topLeft' ? 'topLeft' : 'topRight',
+        usageOverlayMode: s.usageOverlayMode === 'remaining' ? 'remaining' : 'used',
       }
       loaded.value = true
 
@@ -138,5 +141,33 @@ export function useSettings() {
     }
   }
 
-  return { settings, loaded, load, ensureLoaded, save, setAutostart, setThemeMode, applyOverlay, applyUsageOverlay }
+  // enableUsageOverlayIfDisabled 供用量查询页调用：用户添加首个 Coding Plan 账号时
+  // 默认开启用量悬浮窗（已开启则不动）。返回是否本次实际开启，供调用方提示。
+  async function enableUsageOverlayIfDisabled(): Promise<boolean> {
+    await ensureLoaded()
+    if (settings.value.usageOverlayEnabled) return false
+    settings.value.usageOverlayEnabled = true
+    try {
+      await ApplyUsageOverlay(true, settings.value.usageOverlayPosition)
+      await SettingsService.SaveSettings(settings.value)
+      return true
+    } catch (e) {
+      settings.value.usageOverlayEnabled = false // 回滚，避免内存态与实际窗口不一致
+      toast(e instanceof Error ? e.message : String(e), 'error')
+      return false
+    }
+  }
+
+  return {
+    settings,
+    loaded,
+    load,
+    ensureLoaded,
+    save,
+    setAutostart,
+    setThemeMode,
+    applyOverlay,
+    applyUsageOverlay,
+    enableUsageOverlayIfDisabled,
+  }
 }

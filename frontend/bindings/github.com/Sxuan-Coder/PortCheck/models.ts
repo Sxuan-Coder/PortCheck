@@ -427,6 +427,11 @@ export class Settings {
      */
     "usageOverlayPosition": string;
 
+    /**
+     * used / remaining，默认 used
+     */
+    "usageOverlayMode": string;
+
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
         if (!("theme" in $$source)) {
@@ -458,6 +463,9 @@ export class Settings {
         }
         if (!("usageOverlayPosition" in $$source)) {
             this["usageOverlayPosition"] = "";
+        }
+        if (!("usageOverlayMode" in $$source)) {
+            this["usageOverlayMode"] = "";
         }
 
         Object.assign(this, $$source);

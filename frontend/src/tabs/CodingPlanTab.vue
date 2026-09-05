@@ -2,15 +2,17 @@
 // Coding Plan 用量页：账号卡片墙 + 添加/编辑弹窗。
 // 用量每 5 分钟自动刷新一次；倒计时每 30 秒本地重算（不重新请求接口）。
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { Dialogs } from '@wailsio/runtime'
+import { Dialogs, Events } from '@wailsio/runtime'
 import { CodingPlanService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
 import type { CodingPlanAccount, CodingPlanUsage } from '../../bindings/github.com/Sxuan-Coder/PortCheck/models.js'
 import CodingPlanCard from '../components/CodingPlanCard.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useToast } from '../composables/useToast'
+import { useSettings } from '../composables/useSettings'
 import { PROVIDERS, defaultRegion, providerMeta } from '../lib/codingplans'
 
 const { toast } = useToast()
+const { enableUsageOverlayIfDisabled } = useSettings()
 
 const accounts = ref<CodingPlanAccount[]>([])
 const usages = ref<Record<string, CodingPlanUsage>>({})
@@ -139,7 +141,14 @@ async function save() {
     } catch {
       /* 查询失败由卡片 error 态展示 */
     }
+    // 添加首个账号时默认开启用量悬浮窗（已开启则不动，可在设置中关闭）
+    if (!form.id && accounts.value.length === 1) {
+      const enabledNow = await enableUsageOverlayIfDisabled()
+      if (enabledNow) toast('已自动开启用量悬浮窗，可在「设置 → 用量悬浮窗」调整', 'info')
+    }
     toast(form.id ? '账号已更新' : '账号已添加', 'success')
+    // 通知用量悬浮窗（独立 webview）立即重查并调整行数。
+    Events.Emit('codingplan:changed')
   } catch (e) {
     toast(e instanceof Error ? e.message : String(e), 'error')
   } finally {
@@ -161,6 +170,7 @@ async function remove(a: CodingPlanAccount) {
     await CodingPlanService.DeleteCodingPlan(a.id)
     await load()
     toast('已删除账号', 'success')
+    Events.Emit('codingplan:changed')
   } catch (e) {
     toast(e instanceof Error ? e.message : String(e), 'error')
   }

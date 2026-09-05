@@ -27,6 +27,12 @@ const (
 	overlayColorYellow = "yellow"
 )
 
+// 用量悬浮窗百分比展示模式枚举。
+const (
+	usageOverlayModeUsed      = "used"      // 已用百分比（默认）
+	usageOverlayModeRemaining = "remaining" // 剩余百分比
+)
+
 // overlayFontSizeMin/Max 限定悬浮窗字号区间，超界回退默认。
 const (
 	overlayFontSizeMin = 10
@@ -47,6 +53,7 @@ type Settings struct {
 
 	UsageOverlayEnabled  bool   `json:"usageOverlayEnabled"`  // 用量悬浮窗开关，默认关闭
 	UsageOverlayPosition string `json:"usageOverlayPosition"` // topLeft / topRight，默认 topRight
+	UsageOverlayMode     string `json:"usageOverlayMode"`     // used / remaining，默认 used
 }
 
 // SettingsService 提供持久化配置读写与开机自启管理。
@@ -66,6 +73,7 @@ func DefaultSettings() Settings {
 
 		UsageOverlayEnabled:  false,
 		UsageOverlayPosition: overlayPositionTopRight,
+		UsageOverlayMode:     usageOverlayModeUsed,
 	}
 }
 
@@ -101,6 +109,14 @@ func normalizeOverlayFontSize(v int) int {
 		return overlayFontSizeDef
 	}
 	return v
+}
+
+// normalizeUsageOverlayMode 校验用量悬浮窗展示模式枚举，非法值回退为已用百分比。
+func normalizeUsageOverlayMode(v string) string {
+	if v == usageOverlayModeRemaining {
+		return usageOverlayModeRemaining
+	}
+	return usageOverlayModeUsed
 }
 
 // settingsPath 返回 %APPDATA%/PortCheck/settings.json。
@@ -140,6 +156,7 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
 	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
 	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
+	settings.UsageOverlayMode = normalizeUsageOverlayMode(settings.UsageOverlayMode)
 	return settings, nil
 }
 
@@ -149,6 +166,7 @@ func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
 	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
 	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
+	settings.UsageOverlayMode = normalizeUsageOverlayMode(settings.UsageOverlayMode)
 	path, err := settingsPath()
 	if err != nil {
 		return err

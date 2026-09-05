@@ -25,6 +25,10 @@ const overlayFontSizeOptions = [
   { value: 14, label: '大' },
   { value: 16, label: '特大' },
 ]
+const usageOverlayModeOptions = [
+  { value: 'used', label: '已用百分比' },
+  { value: 'remaining', label: '剩余百分比' },
+]
 
 const autostartEnabled = ref(false)
 const changingScope = ref(false)
@@ -115,6 +119,17 @@ async function onUsageOverlayPositionChange(e: Event) {
   await applyUsageOverlay()
 }
 
+// 显示模式切换：即时推送给用量悬浮窗（独立 webview），并静默持久化。
+async function onUsageOverlayModeChange(e: Event) {
+  settings.value.usageOverlayMode = (e.target as HTMLSelectElement).value as 'used' | 'remaining'
+  Events.Emit('usage-overlay:config', { mode: settings.value.usageOverlayMode })
+  try {
+    await SettingsService.SaveSettings(settings.value)
+  } catch {
+    /* 忽略持久化失败 */
+  }
+}
+
 // emitOverlayAppearance 把颜色/字号即时推送给悬浮窗窗口（独立 webview），并静默持久化。
 async function emitOverlayAppearance() {
   Events.Emit('overlay:config', {
@@ -140,196 +155,261 @@ async function onOverlayFontSizeChange(e: Event) {
 </script>
 
 <template>
-  <div class="settings-list">
-    <!-- 主题模式 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">主题模式</span>
-        <span class="setting-desc">选择界面外观风格</span>
-      </div>
-      <label class="switch" :class="{ on: themeChecked }">
-        <input type="checkbox" v-model="themeChecked" class="switch-input" />
-        <span class="switch-track">
-          <span class="switch-thumb" />
-        </span>
-        <span class="switch-text">{{ themeChecked ? '亮色' : '暗色' }}</span>
-      </label>
-    </div>
+  <div class="panel">
+    <!-- ============ 通用 ============ -->
+    <section class="section">
+      <div class="section-title">通用</div>
+      <div class="settings-list">
+        <!-- 主题模式 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">主题模式</span>
+            <span class="setting-desc">选择界面外观风格</span>
+          </div>
+          <label class="switch" :class="{ on: themeChecked }">
+            <input type="checkbox" v-model="themeChecked" class="switch-input" />
+            <span class="switch-track">
+              <span class="switch-thumb" />
+            </span>
+            <span class="switch-text">{{ themeChecked ? '亮色' : '暗色' }}</span>
+          </label>
+        </div>
 
-    <!-- 开机自启 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">开机自启</span>
-        <span class="setting-desc">开机时自动启动 PortCheck</span>
-      </div>
-      <label class="switch" :class="{ on: autostartEnabled }">
-        <input
-          type="checkbox"
-          class="switch-input"
-          v-model="autostartEnabled"
-          @change="onAutostartChange(autostartEnabled)"
-        />
-        <span class="switch-track">
-          <span class="switch-thumb" />
-        </span>
-        <span class="switch-text">{{ autostartEnabled ? '开' : '关' }}</span>
-      </label>
-    </div>
+        <!-- 开机自启 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">开机自启</span>
+            <span class="setting-desc">开机时自动启动 PortCheck</span>
+          </div>
+          <label class="switch" :class="{ on: autostartEnabled }">
+            <input
+              type="checkbox"
+              class="switch-input"
+              v-model="autostartEnabled"
+              @change="onAutostartChange(autostartEnabled)"
+            />
+            <span class="switch-track">
+              <span class="switch-thumb" />
+            </span>
+            <span class="switch-text">{{ autostartEnabled ? '开' : '关' }}</span>
+          </label>
+        </div>
 
-    <!-- 进程刷新间隔 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">进程刷新间隔</span>
-        <span class="setting-desc">影响进程列表、CPU 曲线的更新频率</span>
+        <!-- 语言 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">语言</span>
+            <span class="setting-desc">界面显示语言</span>
+          </div>
+          <select class="setting-select" disabled>
+            <option value="zh-CN">简体中文</option>
+          </select>
+        </div>
       </div>
-      <select
-        class="setting-select"
-        :value="settings.refreshIntervalMs"
-        @change="onIntervalChange(Number(($event.target as HTMLSelectElement).value))"
-      >
-        <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-    </div>
+    </section>
 
-    <!-- 进程范围 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">进程范围</span>
-        <span class="setting-desc">「整个系统」可查看 SYSTEM 等全部进程，需管理员权限并重启应用</span>
-      </div>
-      <select
-        class="setting-select"
-        :value="settings.processScope"
-        :disabled="changingScope"
-        @change="onScopeChange(($event.target as HTMLSelectElement).value as 'currentUser' | 'system')"
-      >
-        <option value="currentUser">当前用户</option>
-        <option value="system">整个系统</option>
-      </select>
-    </div>
+    <!-- ============ 进程 ============ -->
+    <section class="section">
+      <div class="section-title">进程</div>
+      <div class="settings-list">
+        <!-- 进程刷新间隔 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">进程刷新间隔</span>
+            <span class="setting-desc">影响进程列表、CPU 曲线的更新频率</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.refreshIntervalMs"
+            @change="onIntervalChange(Number(($event.target as HTMLSelectElement).value))"
+          >
+            <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
 
-    <!-- 性能悬浮窗 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">性能悬浮窗</span>
-        <span class="setting-desc">在屏幕角落常驻显示 CPU / 内存 / 提交内存，主窗口最小化后仍保持</span>
+        <!-- 进程范围 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">进程范围</span>
+            <span class="setting-desc">「整个系统」可查看 SYSTEM 等全部进程，需管理员权限并重启应用</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.processScope"
+            :disabled="changingScope"
+            @change="onScopeChange(($event.target as HTMLSelectElement).value as 'currentUser' | 'system')"
+          >
+            <option value="currentUser">当前用户</option>
+            <option value="system">整个系统</option>
+          </select>
+        </div>
       </div>
-      <label class="switch" :class="{ on: settings.overlayEnabled }">
-        <input
-          type="checkbox"
-          class="switch-input"
-          v-model="settings.overlayEnabled"
-          @change="onOverlayToggle"
-        />
-        <span class="switch-track">
-          <span class="switch-thumb" />
-        </span>
-        <span class="switch-text">{{ settings.overlayEnabled ? '开' : '关' }}</span>
-      </label>
-    </div>
+    </section>
 
-    <!-- 悬浮窗位置 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">悬浮窗位置</span>
-        <span class="setting-desc">仅在悬浮窗开启时生效</span>
-      </div>
-      <select
-        class="setting-select"
-        :value="settings.overlayPosition"
-        :disabled="!settings.overlayEnabled"
-        @change="onOverlayPositionChange"
-      >
-        <option value="topRight">右上角</option>
-        <option value="topLeft">左上角</option>
-      </select>
-    </div>
+    <!-- ============ 性能悬浮窗 ============ -->
+    <section class="section">
+      <div class="section-title">性能悬浮窗</div>
+      <div class="settings-list">
+        <!-- 开关 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">启用悬浮窗</span>
+            <span class="setting-desc">在屏幕角落常驻显示 CPU / 内存 / 提交内存，主窗口最小化后仍保持</span>
+          </div>
+          <label class="switch" :class="{ on: settings.overlayEnabled }">
+            <input
+              type="checkbox"
+              class="switch-input"
+              v-model="settings.overlayEnabled"
+              @change="onOverlayToggle"
+            />
+            <span class="switch-track">
+              <span class="switch-thumb" />
+            </span>
+            <span class="switch-text">{{ settings.overlayEnabled ? '开' : '关' }}</span>
+          </label>
+        </div>
 
-    <!-- 悬浮窗颜色 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">悬浮窗颜色</span>
-        <span class="setting-desc">悬浮窗文字颜色，仅在开启时生效</span>
-      </div>
-      <select
-        class="setting-select"
-        :value="settings.overlayColor"
-        :disabled="!settings.overlayEnabled"
-        @change="onOverlayColorChange"
-      >
-        <option v-for="opt in overlayColorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-      </select>
-    </div>
+        <!-- 位置 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">位置</span>
+            <span class="setting-desc">仅在悬浮窗开启时生效</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.overlayPosition"
+            :disabled="!settings.overlayEnabled"
+            @change="onOverlayPositionChange"
+          >
+            <option value="topRight">右上角</option>
+            <option value="topLeft">左上角</option>
+          </select>
+        </div>
 
-    <!-- 悬浮窗字号 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">悬浮窗字号</span>
-        <span class="setting-desc">悬浮窗文字大小，仅在开启时生效</span>
-      </div>
-      <select
-        class="setting-select"
-        :value="settings.overlayFontSize"
-        :disabled="!settings.overlayEnabled"
-        @change="onOverlayFontSizeChange"
-      >
-        <option v-for="opt in overlayFontSizeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-      </select>
-    </div>
+        <!-- 颜色 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">文字颜色</span>
+            <span class="setting-desc">悬浮窗文字颜色，仅在开启时生效</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.overlayColor"
+            :disabled="!settings.overlayEnabled"
+            @change="onOverlayColorChange"
+          >
+            <option v-for="opt in overlayColorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
 
-    <!-- 用量悬浮窗 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">用量悬浮窗</span>
-        <span class="setting-desc">以圆环图表常驻显示 Coding Plan 的 5 小时 / 周用量百分比与重置倒计时</span>
+        <!-- 字号 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">文字字号</span>
+            <span class="setting-desc">悬浮窗文字大小，仅在开启时生效</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.overlayFontSize"
+            :disabled="!settings.overlayEnabled"
+            @change="onOverlayFontSizeChange"
+          >
+            <option v-for="opt in overlayFontSizeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
       </div>
-      <label class="switch" :class="{ on: settings.usageOverlayEnabled }">
-        <input
-          type="checkbox"
-          class="switch-input"
-          v-model="settings.usageOverlayEnabled"
-          @change="onUsageOverlayToggle"
-        />
-        <span class="switch-track">
-          <span class="switch-thumb" />
-        </span>
-        <span class="switch-text">{{ settings.usageOverlayEnabled ? '开' : '关' }}</span>
-      </label>
-    </div>
+    </section>
 
-    <!-- 用量悬浮窗位置 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">用量悬浮窗位置</span>
-        <span class="setting-desc">与性能悬浮窗同角时自动上下错开</span>
-      </div>
-      <select
-        class="setting-select"
-        :value="settings.usageOverlayPosition"
-        :disabled="!settings.usageOverlayEnabled"
-        @change="onUsageOverlayPositionChange"
-      >
-        <option value="topRight">右上角</option>
-        <option value="topLeft">左上角</option>
-      </select>
-    </div>
+    <!-- ============ 用量悬浮窗 ============ -->
+    <section class="section">
+      <div class="section-title">用量悬浮窗</div>
+      <div class="settings-list">
+        <!-- 开关 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">启用悬浮窗</span>
+            <span class="setting-desc">以圆环图表常驻显示 Coding Plan 的 5 小时 / 周用量百分比与重置倒计时；添加首个账号时会自动开启</span>
+          </div>
+          <label class="switch" :class="{ on: settings.usageOverlayEnabled }">
+            <input
+              type="checkbox"
+              class="switch-input"
+              v-model="settings.usageOverlayEnabled"
+              @change="onUsageOverlayToggle"
+            />
+            <span class="switch-track">
+              <span class="switch-thumb" />
+            </span>
+            <span class="switch-text">{{ settings.usageOverlayEnabled ? '开' : '关' }}</span>
+          </label>
+        </div>
 
-    <!-- 语言 -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">语言</span>
-        <span class="setting-desc">界面显示语言</span>
+        <!-- 位置 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">位置</span>
+            <span class="setting-desc">与性能悬浮窗同角时自动上下错开</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.usageOverlayPosition"
+            :disabled="!settings.usageOverlayEnabled"
+            @change="onUsageOverlayPositionChange"
+          >
+            <option value="topRight">右上角</option>
+            <option value="topLeft">左上角</option>
+          </select>
+        </div>
+
+        <!-- 显示模式 -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">显示模式</span>
+            <span class="setting-desc">圆环与百分比展示「已用」还是「剩余」；颜色始终按已用程度分级</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.usageOverlayMode"
+            :disabled="!settings.usageOverlayEnabled"
+            @change="onUsageOverlayModeChange"
+          >
+            <option v-for="opt in usageOverlayModeOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
       </div>
-      <select class="setting-select" disabled>
-        <option value="zh-CN">简体中文</option>
-      </select>
-    </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
+/* 分组容器：每组一个标题 + 一张设置卡片 */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 0 2px 8px;
+}
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--brand);
+}
 .settings-list {
   display: flex;
   flex-direction: column;
