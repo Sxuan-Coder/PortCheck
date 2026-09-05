@@ -44,6 +44,9 @@ type Settings struct {
 	OverlayPosition   string `json:"overlayPosition"` // topLeft / topRight，默认 topRight
 	OverlayColor      string `json:"overlayColor"`    // white/red/green/blue/yellow，默认 white
 	OverlayFontSize   int    `json:"overlayFontSize"` // 10-18，默认 12
+
+	UsageOverlayEnabled  bool   `json:"usageOverlayEnabled"`  // 用量悬浮窗开关，默认关闭
+	UsageOverlayPosition string `json:"usageOverlayPosition"` // topLeft / topRight，默认 topRight
 }
 
 // SettingsService 提供持久化配置读写与开机自启管理。
@@ -60,6 +63,9 @@ func DefaultSettings() Settings {
 		OverlayPosition:   overlayPositionTopRight,
 		OverlayColor:      overlayColorWhite,
 		OverlayFontSize:   overlayFontSizeDef,
+
+		UsageOverlayEnabled:  false,
+		UsageOverlayPosition: overlayPositionTopRight,
 	}
 }
 
@@ -133,6 +139,7 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
 	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
 	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
+	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
 	return settings, nil
 }
 
@@ -141,7 +148,7 @@ func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
 	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
 	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
-	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
+	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
 	path, err := settingsPath()
 	if err != nil {
 		return err

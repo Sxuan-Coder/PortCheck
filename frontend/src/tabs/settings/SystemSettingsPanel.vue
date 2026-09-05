@@ -8,7 +8,7 @@ import { useTheme } from '../../composables/useTheme'
 import { useToast } from '../../composables/useToast'
 
 const { theme } = useTheme()
-const { settings, load, save, setAutostart, setThemeMode, applyOverlay } = useSettings()
+const { settings, load, save, setAutostart, setThemeMode, applyOverlay, applyUsageOverlay } = useSettings()
 const { toast } = useToast()
 
 // 悬浮窗外观预设：颜色与字号。id 与后端 settings.go 白名单一致。
@@ -104,6 +104,15 @@ async function onOverlayToggle() {
 async function onOverlayPositionChange(e: Event) {
   settings.value.overlayPosition = (e.target as HTMLSelectElement).value as 'topLeft' | 'topRight'
   await applyOverlay()
+}
+
+async function onUsageOverlayToggle() {
+  await applyUsageOverlay()
+}
+
+async function onUsageOverlayPositionChange(e: Event) {
+  settings.value.usageOverlayPosition = (e.target as HTMLSelectElement).value as 'topLeft' | 'topRight'
+  await applyUsageOverlay()
 }
 
 // emitOverlayAppearance 把颜色/字号即时推送给悬浮窗窗口（独立 webview），并静默持久化。
@@ -267,6 +276,43 @@ async function onOverlayFontSizeChange(e: Event) {
         @change="onOverlayFontSizeChange"
       >
         <option v-for="opt in overlayFontSizeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+    </div>
+
+    <!-- 用量悬浮窗 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">用量悬浮窗</span>
+        <span class="setting-desc">以圆环图表常驻显示 Coding Plan 的 5 小时 / 周用量百分比与重置倒计时</span>
+      </div>
+      <label class="switch" :class="{ on: settings.usageOverlayEnabled }">
+        <input
+          type="checkbox"
+          class="switch-input"
+          v-model="settings.usageOverlayEnabled"
+          @change="onUsageOverlayToggle"
+        />
+        <span class="switch-track">
+          <span class="switch-thumb" />
+        </span>
+        <span class="switch-text">{{ settings.usageOverlayEnabled ? '开' : '关' }}</span>
+      </label>
+    </div>
+
+    <!-- 用量悬浮窗位置 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">用量悬浮窗位置</span>
+        <span class="setting-desc">与性能悬浮窗同角时自动上下错开</span>
+      </div>
+      <select
+        class="setting-select"
+        :value="settings.usageOverlayPosition"
+        :disabled="!settings.usageOverlayEnabled"
+        @change="onUsageOverlayPositionChange"
+      >
+        <option value="topRight">右上角</option>
+        <option value="topLeft">左上角</option>
       </select>
     </div>
 

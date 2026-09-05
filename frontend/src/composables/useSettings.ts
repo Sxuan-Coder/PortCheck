@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { SettingsService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
-import { Apply as ApplyOverlay } from '../../bindings/github.com/Sxuan-Coder/PortCheck/overlayservice'
+import { Apply as ApplyOverlay, ApplyUsage as ApplyUsageOverlay } from '../../bindings/github.com/Sxuan-Coder/PortCheck/overlayservice'
 import { useTheme } from './useTheme'
 import { useToast } from './useToast'
 
@@ -13,6 +13,8 @@ export interface AppSettings {
   overlayPosition: 'topLeft' | 'topRight'
   overlayColor: 'white' | 'red' | 'green' | 'blue' | 'yellow'
   overlayFontSize: number
+  usageOverlayEnabled: boolean
+  usageOverlayPosition: 'topLeft' | 'topRight'
 }
 
 const settings = ref<AppSettings>({
@@ -24,6 +26,8 @@ const settings = ref<AppSettings>({
   overlayPosition: 'topRight',
   overlayColor: 'white',
   overlayFontSize: 12,
+  usageOverlayEnabled: false,
+  usageOverlayPosition: 'topRight',
 })
 
 // loaded 标记后端配置是否已成功加载到内存。save/applyOverlay 前必须为 true，
@@ -57,6 +61,8 @@ export function useSettings() {
         overlayFontSize: Number.isFinite(s.overlayFontSize) && s.overlayFontSize >= 10 && s.overlayFontSize <= 18
           ? s.overlayFontSize
           : 12,
+        usageOverlayEnabled: !!s.usageOverlayEnabled,
+        usageOverlayPosition: s.usageOverlayPosition === 'topLeft' ? 'topLeft' : 'topRight',
       }
       loaded.value = true
 
@@ -121,5 +127,16 @@ export function useSettings() {
     }
   }
 
-  return { settings, loaded, load, ensureLoaded, save, setAutostart, setThemeMode, applyOverlay }
+  // applyUsageOverlay 同理：同步「用量悬浮窗」（Coding Plan 圆环图表）并静默持久化。
+  async function applyUsageOverlay() {
+    await ensureLoaded()
+    try {
+      await ApplyUsageOverlay(settings.value.usageOverlayEnabled, settings.value.usageOverlayPosition)
+      await SettingsService.SaveSettings(settings.value)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), 'error')
+    }
+  }
+
+  return { settings, loaded, load, ensureLoaded, save, setAutostart, setThemeMode, applyOverlay, applyUsageOverlay }
 }

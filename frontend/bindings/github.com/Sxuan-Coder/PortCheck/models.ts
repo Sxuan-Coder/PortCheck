@@ -417,6 +417,16 @@ export class Settings {
      */
     "overlayFontSize": number;
 
+    /**
+     * 用量悬浮窗开关，默认关闭
+     */
+    "usageOverlayEnabled": boolean;
+
+    /**
+     * topLeft / topRight，默认 topRight
+     */
+    "usageOverlayPosition": string;
+
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
         if (!("theme" in $$source)) {
@@ -442,6 +452,12 @@ export class Settings {
         }
         if (!("overlayFontSize" in $$source)) {
             this["overlayFontSize"] = 0;
+        }
+        if (!("usageOverlayEnabled" in $$source)) {
+            this["usageOverlayEnabled"] = false;
+        }
+        if (!("usageOverlayPosition" in $$source)) {
+            this["usageOverlayPosition"] = "";
         }
 
         Object.assign(this, $$source);
