@@ -132,10 +132,12 @@ func (s *OverlayService) Apply(enabled bool, position string) error {
 			BackgroundColour: application.NewRGBA(0, 0, 0, 0),
 			URL:              overlayURL,
 		})
-		s.win.Show()
-		// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
-		s.win.SetPosition(x, y)
-		return nil
+			s.win.Show()
+			// 修正 WS_EX_NOACTIVATE 副作用（详见 fixOverlayExStyle 注释），必须 Show 后调用。
+			fixOverlayExStyle(s.win)
+			// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
+			s.win.SetPosition(x, y)
+			return nil
 	}
 
 	// 已存在：仅更新位置。
@@ -189,10 +191,12 @@ func (s *OverlayService) ApplyUsage(enabled bool, position string) error {
 			BackgroundColour: application.NewRGBA(0, 0, 0, 0),
 			URL:              usageOverlayURL,
 		})
-		s.usageWin.Show()
-		// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
-		s.usageWin.SetPosition(x, y)
-		return nil
+			s.usageWin.Show()
+			// 修正 WS_EX_NOACTIVATE 副作用（详见 fixOverlayExStyle 注释），必须 Show 后调用。
+			fixOverlayExStyle(s.usageWin)
+			// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
+			s.usageWin.SetPosition(x, y)
+			return nil
 	}
 
 	// 已存在：仅更新位置。
