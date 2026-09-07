@@ -32,6 +32,15 @@ export function CurrentVersion(): $CancellablePromise<string> {
 }
 
 /**
+ * DownloadInstaller 下载安装包到系统临时目录并自动启动安装程序。
+ * 通过 update:download 事件广播下载进度 {received,total,percent}；
+ * 返回本地文件路径。仅 Windows 会自动打开安装包，其他平台仅下载（占位行为）。
+ */
+export function DownloadInstaller(url: string): $CancellablePromise<string> {
+    return $Call.ByID(1736053616, url);
+}
+
+/**
  * OpenURL 用系统默认浏览器打开指定网址（用于跳转 Release 下载页）。
  */
 export function OpenURL(url: string): $CancellablePromise<void> {

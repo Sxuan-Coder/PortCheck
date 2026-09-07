@@ -598,6 +598,11 @@ export class UpdateInfo {
     "downloadUrl": string;
 
     /**
+     * Windows 一键安装包地址（-installer.exe，可能为空）
+     */
+    "installerUrl": string;
+
+    /**
      * Release 说明
      */
     "notes": string;
@@ -618,6 +623,9 @@ export class UpdateInfo {
         }
         if (!("downloadUrl" in $$source)) {
             this["downloadUrl"] = "";
+        }
+        if (!("installerUrl" in $$source)) {
+            this["installerUrl"] = "";
         }
         if (!("notes" in $$source)) {
             this["notes"] = "";

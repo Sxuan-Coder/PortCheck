@@ -61,12 +61,23 @@ function onMaskClick() {
           <p v-else class="note-empty">详见 GitHub Release 页面。</p>
         </div>
 
+        <!-- 下载进度 -->
+        <div v-if="state.downloading" class="upd-progress">
+          <div class="prog-bar">
+            <div class="prog-fill" :style="{ width: state.progress + '%' }"></div>
+          </div>
+          <div class="prog-text">
+            <template v-if="state.totalMB > 0">正在下载安装包 {{ state.progress }}%（{{ state.receivedMB.toFixed(1) }} / {{ state.totalMB.toFixed(1) }} MB）</template>
+            <template v-else>正在下载安装包，已下载 {{ state.receivedMB.toFixed(1) }} MB…</template>
+          </div>
+        </div>
+
         <!-- 按钮区 -->
         <div class="upd-actions">
-          <button class="btn-ghost" @click="closeUpdateDialog">稍后</button>
-          <button class="btn-primary" @click="confirmUpdate">
+          <button class="btn-ghost" :disabled="state.downloading" @click="closeUpdateDialog">稍后</button>
+          <button class="btn-primary" :disabled="state.downloading" @click="confirmUpdate">
             <AppIcon name="download" :size="13" />
-            前往下载
+            {{ state.downloading ? '下载中…' : '下载并安装' }}
           </button>
         </div>
       </div>
@@ -194,11 +205,38 @@ function onMaskClick() {
   color: var(--text-3);
   font-style: italic;
 }
+/* 下载进度 */
+.upd-progress {
+  margin-bottom: 16px;
+}
+.prog-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--field-bg);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--brand);
+  transition: width 0.2s ease;
+}
+.prog-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
 /* 按钮区 */
 .upd-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+.btn-ghost:disabled,
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 .btn-ghost {
   padding: 8px 16px;
