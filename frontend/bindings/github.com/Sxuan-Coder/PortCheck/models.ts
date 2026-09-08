@@ -17,7 +17,7 @@ export class CodingPlanAccount {
     "name": string;
 
     /**
-     * zhipu / kimi / minimax / zenmux
+     * zhipu / kimi / minimax / zenmux / deepseek
      */
     "provider": string;
 
@@ -26,6 +26,11 @@ export class CodingPlanAccount {
      */
     "baseUrl": string;
     "apiKey": string;
+
+    /**
+     * 余额预警阈值（元），0 = 不提醒；仅余额型供应商（deepseek）使用
+     */
+    "alertAmount": number;
     "createdAt": number;
 
     /** Creates a new CodingPlanAccount instance. */
@@ -45,6 +50,9 @@ export class CodingPlanAccount {
         if (!("apiKey" in $$source)) {
             this["apiKey"] = "";
         }
+        if (!("alertAmount" in $$source)) {
+            this["alertAmount"] = 0;
+        }
         if (!("createdAt" in $$source)) {
             this["createdAt"] = 0;
         }
@@ -58,6 +66,65 @@ export class CodingPlanAccount {
     static createFrom($$source: any = {}): CodingPlanAccount {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new CodingPlanAccount($$parsedSource as Partial<CodingPlanAccount>);
+    }
+}
+
+/**
+ * CodingPlanBalance 描述余额型供应商（DeepSeek）的账户余额，金额单位为账户币种。
+ */
+export class CodingPlanBalance {
+    /**
+     * "CNY" / "USD"
+     */
+    "currency": string;
+
+    /**
+     * 总余额（赠金 + 充值）
+     */
+    "total": number;
+
+    /**
+     * 未过期赠金
+     */
+    "granted": number;
+
+    /**
+     * 充值余额
+     */
+    "toppedUp": number;
+
+    /**
+     * 余额是否足以进行 API 调用
+     */
+    "available": boolean;
+
+    /** Creates a new CodingPlanBalance instance. */
+    constructor($$source: Partial<CodingPlanBalance> = {}) {
+        if (!("currency" in $$source)) {
+            this["currency"] = "";
+        }
+        if (!("total" in $$source)) {
+            this["total"] = 0;
+        }
+        if (!("granted" in $$source)) {
+            this["granted"] = 0;
+        }
+        if (!("toppedUp" in $$source)) {
+            this["toppedUp"] = 0;
+        }
+        if (!("available" in $$source)) {
+            this["available"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CodingPlanBalance instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CodingPlanBalance {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CodingPlanBalance($$parsedSource as Partial<CodingPlanBalance>);
     }
 }
 
@@ -107,6 +174,7 @@ export class CodingPlanQuota {
 /**
  * CodingPlanUsage 是单账号一次用量查询的结果；失败不返回 Go 错误，
  * 而是 Status=expired/error + Error 带原因，便于前端按卡片展示失败态。
+ * 配额型供应商填 FiveHour/Weekly，余额型供应商填 Balance（互斥，nil 区分形态）。
  */
 export class CodingPlanUsage {
     "accountId": string;
@@ -130,6 +198,11 @@ export class CodingPlanUsage {
      * 周（7 天）窗口；nil 表示套餐无周限额
      */
     "weekly": CodingPlanQuota | null;
+
+    /**
+     * 余额（DeepSeek）；nil 表示配额型
+     */
+    "balance": CodingPlanBalance | null;
     "error": string;
     "queriedAt": number;
 
@@ -150,6 +223,9 @@ export class CodingPlanUsage {
         if (!("weekly" in $$source)) {
             this["weekly"] = null;
         }
+        if (!("balance" in $$source)) {
+            this["balance"] = null;
+        }
         if (!("error" in $$source)) {
             this["error"] = "";
         }
@@ -166,12 +242,16 @@ export class CodingPlanUsage {
     static createFrom($$source: any = {}): CodingPlanUsage {
         const $$createField3_0 = $$createType1;
         const $$createField4_0 = $$createType1;
+        const $$createField5_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("fiveHour" in $$parsedSource) {
             $$parsedSource["fiveHour"] = $$createField3_0($$parsedSource["fiveHour"]);
         }
         if ("weekly" in $$parsedSource) {
             $$parsedSource["weekly"] = $$createField4_0($$parsedSource["weekly"]);
+        }
+        if ("balance" in $$parsedSource) {
+            $$parsedSource["balance"] = $$createField5_0($$parsedSource["balance"]);
         }
         return new CodingPlanUsage($$parsedSource as Partial<CodingPlanUsage>);
     }
@@ -291,8 +371,8 @@ export class PortListResult {
      * Creates a new PortListResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PortListResult {
-        const $$createField0_0 = $$createType3;
-        const $$createField5_0 = $$createType4;
+        const $$createField0_0 = $$createType5;
+        const $$createField5_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ports" in $$parsedSource) {
             $$parsedSource["ports"] = $$createField0_0($$parsedSource["ports"]);
@@ -646,6 +726,8 @@ export class UpdateInfo {
 // Private type creation functions
 const $$createType0 = CodingPlanQuota.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = PortEntry.createFrom;
-const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $Create.Array($Create.Any);
+const $$createType2 = CodingPlanBalance.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = PortEntry.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $Create.Array($Create.Any);

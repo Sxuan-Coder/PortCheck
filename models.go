@@ -55,12 +55,13 @@ type StartupOpResult struct {
 
 // CodingPlanAccount 描述一条 Coding Plan 用量监控账号的配置。
 type CodingPlanAccount struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`     // 显示名，留空时由前端回退为供应商名
-	Provider  string `json:"provider"` // zhipu / kimi / minimax / zenmux
-	BaseURL   string `json:"baseUrl"`  // zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站
-	APIKey    string `json:"apiKey"`
-	CreatedAt int64  `json:"createdAt"`
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`      // 显示名，留空时由前端回退为供应商名
+	Provider    string  `json:"provider"`  // zhipu / kimi / minimax / zenmux / deepseek
+	BaseURL     string  `json:"baseUrl"`   // zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站
+	APIKey      string  `json:"apiKey"`
+	AlertAmount float64 `json:"alertAmount"` // 余额预警阈值（元），0 = 不提醒；仅余额型供应商（deepseek）使用
+	CreatedAt   int64   `json:"createdAt"`
 }
 
 // CodingPlanQuota 描述一个用量窗口（5 小时 / 周）的百分比与重置时间。
@@ -70,16 +71,27 @@ type CodingPlanQuota struct {
 	UsedLabel   string  `json:"usedLabel"`   // 补充用量文本（如 ZenMux 的 "$3.20 / $7.50"），无则空
 }
 
+// CodingPlanBalance 描述余额型供应商（DeepSeek）的账户余额，金额单位为账户币种。
+type CodingPlanBalance struct {
+	Currency  string  `json:"currency"`  // "CNY" / "USD"
+	Total     float64 `json:"total"`     // 总余额（赠金 + 充值）
+	Granted   float64 `json:"granted"`   // 未过期赠金
+	ToppedUp  float64 `json:"toppedUp"`  // 充值余额
+	Available bool    `json:"available"` // 余额是否足以进行 API 调用
+}
+
 // CodingPlanUsage 是单账号一次用量查询的结果；失败不返回 Go 错误，
 // 而是 Status=expired/error + Error 带原因，便于前端按卡片展示失败态。
+// 配额型供应商填 FiveHour/Weekly，余额型供应商填 Balance（互斥，nil 区分形态）。
 type CodingPlanUsage struct {
-	AccountID string           `json:"accountId"`
-	PlanName  string           `json:"planName"` // 套餐等级（Lite/Pro/Max 等），无则空
-	Status    string           `json:"status"`   // ok / expired / error
-	FiveHour  *CodingPlanQuota `json:"fiveHour"` // 5 小时窗口；nil 表示无该桶
-	Weekly    *CodingPlanQuota `json:"weekly"`   // 周（7 天）窗口；nil 表示套餐无周限额
-	Error     string           `json:"error"`
-	QueriedAt int64            `json:"queriedAt"`
+	AccountID string             `json:"accountId"`
+	PlanName  string             `json:"planName"` // 套餐等级（Lite/Pro/Max 等），无则空
+	Status    string             `json:"status"`   // ok / expired / error
+	FiveHour  *CodingPlanQuota   `json:"fiveHour"` // 5 小时窗口；nil 表示无该桶
+	Weekly    *CodingPlanQuota   `json:"weekly"`   // 周（7 天）窗口；nil 表示套餐无周限额
+	Balance   *CodingPlanBalance `json:"balance"`  // 余额（DeepSeek）；nil 表示配额型
+	Error     string             `json:"error"`
+	QueriedAt int64              `json:"queriedAt"`
 }
 
 // MonitorTick 是后端单 ticker 每秒组装并一次性推送给前端的合并载荷，

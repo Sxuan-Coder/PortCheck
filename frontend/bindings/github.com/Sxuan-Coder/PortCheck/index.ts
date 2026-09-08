@@ -22,6 +22,7 @@ export {
 
 export {
     CodingPlanAccount,
+    CodingPlanBalance,
     CodingPlanQuota,
     CodingPlanUsage,
     KillProcessResult,

@@ -1,8 +1,9 @@
 package main
 
 // Coding Plan 用量查询服务：对接 Kimi For Coding、智谱 GLM（国内/国际）、
-// MiniMax（国内/国际）、ZenMux 四家供应商的用量接口，统一抽象为
-// 「5 小时窗口 + 周窗口」两个配额桶（已用百分比 + 重置时间）。
+// MiniMax（国内/国际）、ZenMux 四家配额型供应商的用量接口，统一抽象为
+// 「5 小时窗口 + 周窗口」两个配额桶（已用百分比 + 重置时间）；另接入
+// DeepSeek 余额型供应商（账户余额 + 预警值）。
 // 接口语义与解析逻辑对齐 cc-switch 的 Rust 实现，并保留其踩坑修复：
 //   - 智谱 TOKENS_LIMIT 按 unit 字段分桶（unit=3 五小时 / unit=6 周），不能按
 //     nextResetTime 排序分桶：周期末尾周桶会比 5h 桶更早重置（cc-switch #3036）。
@@ -26,10 +27,11 @@ import (
 
 // 供应商标识（存储于 CodingPlanAccount.Provider）。
 const (
-	codingPlanZhipu   = "zhipu"
-	codingPlanKimi    = "kimi"
-	codingPlanMiniMax = "minimax"
-	codingPlanZenMux  = "zenmux"
+	codingPlanZhipu    = "zhipu"
+	codingPlanKimi     = "kimi"
+	codingPlanMiniMax  = "minimax"
+	codingPlanZenMux   = "zenmux"
+	codingPlanDeepseek = "deepseek"
 )
 
 // 查询结果状态。
@@ -48,6 +50,42 @@ var codingPlanHTTPClient = &http.Client{Timeout: codingPlanHTTPTimeout}
 
 // codingPlanMu 保护 codingplans.json 的读改写（前端可能并发触发保存/删除）。
 var codingPlanMu sync.Mutex
+
+// ── 供应商注册表 ───────────────────────────────────────────────
+
+// codingPlanProvider 描述一个供应商：默认显示名 + 用量查询实现。
+// query 只需填 FiveHour/Weekly/Balance/PlanName 等形态字段，
+// AccountID/Status/QueriedAt/Error 由分发器 queryCodingPlanQuota 统一处理；
+// 鉴权失败（HTTP 401/403）用 errCodingPlanAuth 包装以归为「密钥失效」态。
+type codingPlanProvider struct {
+	label string
+	query func(account CodingPlanAccount) (CodingPlanUsage, error)
+}
+
+// quotaUsage 把配额型供应商的 (5h, 周, 套餐名) 组装为统一用量结构。
+func quotaUsage(q5, q7 *CodingPlanQuota, planName string) CodingPlanUsage {
+	return CodingPlanUsage{FiveHour: q5, Weekly: q7, PlanName: planName}
+}
+
+var codingPlanProviders = map[string]codingPlanProvider{
+	codingPlanZhipu: {label: "智谱 GLM", query: func(a CodingPlanAccount) (CodingPlanUsage, error) {
+		q5, q7, name, err := queryZhipuUsage(a.BaseURL, a.APIKey)
+		return quotaUsage(q5, q7, name), err
+	}},
+	codingPlanKimi: {label: "Kimi For Coding", query: func(a CodingPlanAccount) (CodingPlanUsage, error) {
+		q5, q7, name, err := queryKimiUsage(a.APIKey)
+		return quotaUsage(q5, q7, name), err
+	}},
+	codingPlanMiniMax: {label: "MiniMax", query: func(a CodingPlanAccount) (CodingPlanUsage, error) {
+		q5, q7, name, err := queryMiniMaxUsage(a.BaseURL, a.APIKey)
+		return quotaUsage(q5, q7, name), err
+	}},
+	codingPlanZenMux: {label: "ZenMux", query: func(a CodingPlanAccount) (CodingPlanUsage, error) {
+		q5, q7, name, err := queryZenMuxUsage(a.BaseURL, a.APIKey)
+		return quotaUsage(q5, q7, name), err
+	}},
+	codingPlanDeepseek: {label: "DeepSeek", query: queryDeepSeekAccountUsage},
+}
 
 // ── 配置持久化：%APPDATA%/PortCheck/codingplans.json ─────────────
 
@@ -108,16 +146,18 @@ func (s *CodingPlanService) ListCodingPlans() ([]CodingPlanAccount, error) {
 // SaveCodingPlan 新增或更新账号；ID 为空时生成新 ID，返回落库后的账号。
 func (s *CodingPlanService) SaveCodingPlan(account CodingPlanAccount) (CodingPlanAccount, error) {
 	account.Provider = strings.ToLower(strings.TrimSpace(account.Provider))
-	switch account.Provider {
-	case codingPlanZhipu, codingPlanKimi, codingPlanMiniMax, codingPlanZenMux:
-	default:
+	provider, ok := codingPlanProviders[account.Provider]
+	if !ok {
 		return account, fmt.Errorf("不支持的供应商：%s", account.Provider)
+	}
+	if account.AlertAmount < 0 {
+		return account, errors.New("余额预警值不能为负数")
 	}
 	account.APIKey = strings.TrimSpace(account.APIKey)
 	account.BaseURL = strings.TrimSpace(account.BaseURL)
 	account.Name = strings.TrimSpace(account.Name)
 	if account.Name == "" {
-		account.Name = codingPlanProviderLabel(account.Provider)
+		account.Name = provider.label
 	}
 	if account.APIKey == "" {
 		return account, errors.New("API Key 不能为空")
@@ -126,6 +166,10 @@ func (s *CodingPlanService) SaveCodingPlan(account CodingPlanAccount) (CodingPla
 		if !strings.HasPrefix(strings.ToLower(account.BaseURL), "https://") {
 			return account, errors.New("ZenMux 需要完整的 https:// 查询端点 URL")
 		}
+	}
+	// 预警值仅对余额型供应商有意义，其余供应商归零避免残留脏数据。
+	if account.Provider != codingPlanDeepseek {
+		account.AlertAmount = 0
 	}
 
 	codingPlanMu.Lock()
@@ -197,7 +241,7 @@ func (s *CodingPlanService) QueryCodingPlanUsage(id string) (CodingPlanUsage, er
 	return CodingPlanUsage{}, fmt.Errorf("账号不存在：%s", id)
 }
 
-// queryCodingPlanQuota 按供应商分发查询并归一为统一的用量结构。
+// queryCodingPlanQuota 按供应商注册表分发查询并归一为统一的用量结构。
 func queryCodingPlanQuota(account CodingPlanAccount) CodingPlanUsage {
 	usage := CodingPlanUsage{
 		AccountID: account.ID,
@@ -208,22 +252,12 @@ func queryCodingPlanQuota(account CodingPlanAccount) CodingPlanUsage {
 		usage.Error = "API Key 为空"
 		return usage
 	}
-
-	var q5, q7 *CodingPlanQuota
-	var planName string
-	var err error
-	switch account.Provider {
-	case codingPlanZhipu:
-		q5, q7, planName, err = queryZhipuUsage(account.BaseURL, account.APIKey)
-	case codingPlanKimi:
-		q5, q7, planName, err = queryKimiUsage(account.APIKey)
-	case codingPlanMiniMax:
-		q5, q7, planName, err = queryMiniMaxUsage(account.BaseURL, account.APIKey)
-	case codingPlanZenMux:
-		q5, q7, planName, err = queryZenMuxUsage(account.BaseURL, account.APIKey)
-	default:
-		err = fmt.Errorf("不支持的供应商：%s", account.Provider)
+	provider, ok := codingPlanProviders[account.Provider]
+	if !ok {
+		usage.Error = fmt.Sprintf("不支持的供应商：%s", account.Provider)
+		return usage
 	}
+	result, err := provider.query(account)
 	if err != nil {
 		usage.Error = err.Error()
 		if errors.Is(err, errCodingPlanAuth) {
@@ -231,27 +265,12 @@ func queryCodingPlanQuota(account CodingPlanAccount) CodingPlanUsage {
 		}
 		return usage
 	}
-
 	usage.Status = codingPlanStatusOK
-	usage.FiveHour = q5
-	usage.Weekly = q7
-	usage.PlanName = planName
+	usage.FiveHour = result.FiveHour
+	usage.Weekly = result.Weekly
+	usage.Balance = result.Balance
+	usage.PlanName = result.PlanName
 	return usage
-}
-
-// codingPlanProviderLabel 返回供应商默认显示名（备注名留空时回填）。
-func codingPlanProviderLabel(provider string) string {
-	switch provider {
-	case codingPlanZhipu:
-		return "智谱 GLM"
-	case codingPlanKimi:
-		return "Kimi For Coding"
-	case codingPlanMiniMax:
-		return "MiniMax"
-	case codingPlanZenMux:
-		return "ZenMux"
-	}
-	return provider
 }
 
 // ── HTTP 与 JSON 工具 ──────────────────────────────────────────
@@ -633,4 +652,54 @@ func queryZenMuxUsage(baseURL, apiKey string) (*CodingPlanQuota, *CodingPlanQuot
 		planName = fmt.Sprintf("%s (%s)", tier, jStr(data, "account_status"))
 	}
 	return q5, q7, planName, nil
+}
+
+// ── DeepSeek ──────────────────────────────────────────────────
+
+// queryDeepSeekAccountUsage 查询 DeepSeek 余额：
+// GET https://api.deepseek.com/user/balance（Bearer）。余额型供应商，
+// 无 5h/周窗口，只填 Balance；预警展示（低于阈值变红）由前端按 AlertAmount 计算。
+func queryDeepSeekAccountUsage(account CodingPlanAccount) (CodingPlanUsage, error) {
+	body, err := codingPlanGet("https://api.deepseek.com/user/balance", map[string]string{
+		"Authorization": "Bearer " + account.APIKey,
+		"Accept":        "application/json",
+	})
+	if err != nil {
+		return CodingPlanUsage{}, err
+	}
+	balance := parseDeepSeekBalance(body)
+	if balance == nil {
+		return CodingPlanUsage{}, errors.New("响应缺少 balance_infos 字段")
+	}
+	return CodingPlanUsage{Balance: balance}, nil
+}
+
+// parseDeepSeekBalance 解析 balance_infos：优先取 CNY 条目（账户通常单币种，
+// 双币种时人民币为主账务），否则取第一条；金额为字符串数字由 jNum 兼容。
+func parseDeepSeekBalance(body map[string]any) *CodingPlanBalance {
+	var picked map[string]any
+	for _, it := range jArr(body, "balance_infos") {
+		obj, _ := it.(map[string]any)
+		if obj == nil {
+			continue
+		}
+		if jStr(obj, "currency") == "CNY" {
+			picked = obj
+			break
+		}
+		if picked == nil {
+			picked = obj
+		}
+	}
+	if picked == nil {
+		return nil
+	}
+	b := &CodingPlanBalance{
+		Currency:  jStr(picked, "currency"),
+		Available: body["is_available"] == true,
+	}
+	b.Total, _ = jNum(picked, "total_balance")
+	b.Granted, _ = jNum(picked, "granted_balance")
+	b.ToppedUp, _ = jNum(picked, "topped_up_balance")
+	return b
 }

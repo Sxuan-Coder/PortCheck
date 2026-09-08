@@ -2,9 +2,20 @@
 // Coding Plan 用量卡片：CPU 占用风格的桌面组件。
 // 5 小时窗口用环形仪表展示，周用量用进度条展示；颜色分级与 cc-switch 一致
 // （<70% 绿、70-89% 橙、≥90% 红），重置倒计时格式 4h41m / 2d22h。
+// 余额型供应商（DeepSeek）为独立分支：环形仪表中心显示金额（满环 = 预警值 ×10），
+// 进度条显示余额余量，余额 ≤ 预警值或不足以调用时整卡红态。
 import AppIcon from './AppIcon.vue'
 import type { CodingPlanAccount, CodingPlanQuota, CodingPlanUsage } from '../../bindings/github.com/Sxuan-Coder/PortCheck/models.js'
-import { providerMeta, usageLevel, LEVEL_COLOR, countdown } from '../lib/codingplans'
+import {
+  providerMeta,
+  usageLevel,
+  LEVEL_COLOR,
+  countdown,
+  balanceLevel,
+  balancePct,
+  currencySymbol,
+  formatAmount,
+} from '../lib/codingplans'
 
 const props = defineProps<{
   account: CodingPlanAccount
@@ -24,12 +35,31 @@ const colorOf = (q: CodingPlanQuota | null | undefined) => LEVEL_COLOR[q ? usage
 const pctText = (q: CodingPlanQuota) => `${Math.round(q.usedPercent)}%`
 const barWidth = (q: CodingPlanQuota) => `${Math.min(100, Math.max(0, q.usedPercent))}%`
 const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.usedPercent)) / 100)
+
+// 余额型（DeepSeek）展示换算
+const balLevel = () => {
+  const b = props.usage?.balance
+  return b ? balanceLevel(b.total, props.account.alertAmount, b.available) : 'ok'
+}
+const balColor = () => LEVEL_COLOR[balLevel()]
+const balPct = () => {
+  const b = props.usage?.balance
+  return b ? balancePct(b.total, props.account.alertAmount) : 0
+}
+const balRingOffset = () => C * (1 - balPct() / 100)
+const balPctText = () => `${Math.round(balPct())}%`
+const sym = () => currencySymbol(props.usage?.balance?.currency ?? 'CNY')
+const balUnavailable = () => props.usage?.balance?.available === false
 </script>
 
 <template>
   <div
     class="card acrylic-card"
-    :class="{ expired: usage?.status === 'expired', errored: usage?.status === 'error' }"
+    :class="{
+      expired: usage?.status === 'expired',
+      errored: usage?.status === 'error',
+      low: !!usage?.balance && usage.status === 'ok' && balLevel() === 'danger',
+    }"
   >
     <div class="head">
       <div class="who">
@@ -70,7 +100,60 @@ const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.
 
     <!-- 成功态 -->
     <div v-else-if="usage" class="body">
-      <div v-if="usage.fiveHour" class="five">
+      <!-- 余额型（DeepSeek）：环心显示金额，满环参照 = 预警值 ×10 -->
+      <template v-if="usage.balance">
+        <div class="five">
+          <div class="gauge">
+            <svg viewBox="0 0 64 64">
+              <circle class="track" cx="32" cy="32" :r="R" />
+              <circle
+                class="val"
+                cx="32" cy="32" :r="R"
+                :stroke="balColor()"
+                :stroke-dasharray="C"
+                :stroke-dashoffset="balRingOffset()"
+              />
+            </svg>
+            <span class="gauge-num mono amt" :style="{ color: balColor() }">
+              {{ sym() }}{{ formatAmount(usage.balance.total) }}
+            </span>
+          </div>
+          <div class="info">
+            <div class="label">账户余额</div>
+            <div class="bal-total mono" :style="{ color: balColor() }">
+              {{ sym() }}{{ formatAmount(usage.balance.total) }}
+            </div>
+            <div class="bal-row">
+              <span v-if="account.alertAmount > 0">
+                预警值 <b class="mono">{{ sym() }}{{ account.alertAmount }}</b>
+              </span>
+              <span v-else class="muted">未设预警值</span>
+            </div>
+            <div class="usd mono">
+              充值 {{ sym() }}{{ formatAmount(usage.balance.toppedUp) }} · 赠送 {{ sym() }}{{ formatAmount(usage.balance.granted) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="week">
+          <div class="week-head">
+            <span class="label">余额余量</span>
+            <span class="pct mono" :style="{ color: balColor() }">{{ balPctText() }}</span>
+          </div>
+          <div class="meter">
+            <span :style="{ width: `${balPct()}%`, background: balColor() }" />
+          </div>
+          <div class="reset">
+            <span v-if="balUnavailable()" class="insufficient">余额不足，无法调用 API</span>
+            <span v-else-if="account.alertAmount > 0">低于 {{ sym() }}{{ account.alertAmount }} 时整卡红态提醒</span>
+            <span v-else class="muted">可在编辑中设置余额预警值</span>
+          </div>
+        </div>
+      </template>
+
+      <!-- 配额型 -->
+      <template v-else>
+        <div v-if="usage.fiveHour" class="five">
         <div class="gauge">
           <svg viewBox="0 0 64 64">
             <circle class="track" cx="32" cy="32" :r="R" />
@@ -109,6 +192,7 @@ const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.
         </div>
       </div>
       <div v-else class="week none">该套餐无周限额</div>
+      </template>
     </div>
 
     <!-- 尚未查询 -->
@@ -129,6 +213,10 @@ const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.
   border-color: rgba(245, 158, 11, 0.4);
 }
 .card.errored {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+/* 余额跌破预警值（或不足以调用）：与查询失败一致的红边框提醒 */
+.card.low {
   border-color: rgba(239, 68, 68, 0.35);
 }
 
@@ -278,6 +366,32 @@ const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.
   margin-top: 2px;
   font-size: 11px;
   color: var(--text-4);
+}
+
+/* 余额型（DeepSeek） */
+.gauge-num.amt {
+  font-size: 11px;
+}
+.bal-total {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.bal-row {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.bal-row b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.muted {
+  color: var(--text-4);
+}
+.insufficient {
+  color: var(--red);
+  font-weight: 600;
 }
 
 /* 周用量进度条 */

@@ -4,11 +4,12 @@ import { Events } from '@wailsio/runtime'
 import { CodingPlanService, SettingsService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
 import { SetUsageRows } from '../../bindings/github.com/Sxuan-Coder/PortCheck/overlayservice'
 import type { CodingPlanAccount, CodingPlanQuota, CodingPlanUsage } from '../../bindings/github.com/Sxuan-Coder/PortCheck/models.js'
-import { usageLevel, LEVEL_COLOR, countdown, providerMeta } from '../lib/codingplans'
+import { usageLevel, LEVEL_COLOR, countdown, providerMeta, balanceLevel, balancePct, currencySymbol } from '../lib/codingplans'
 
 // 用量悬浮窗：Coding Plan 圆环图表视图，透明背景置顶。
 // 每个账号一行：左侧圆环显示 5 小时窗口百分比（已用/剩余由设置项 usageOverlayMode
-// 决定，圆环颜色始终按「已用程度」分级），右侧账号名 + 「重置倒计时 · 周百分比」。
+// 决定，圆环颜色始终按「已用程度」分级），右侧账号名 + 「重置倒计时 · 周百分比」；
+// 余额型供应商（DeepSeek）的圆环按「余额余量 / 预警值 ×10」填充、颜色按预警分档。
 // 数据自取：启动查询一次 + 每 5 分钟轮询；主窗口增删账号时通过 codingplan:changed
 // 事件即时刷新。窗口高度由后端按行数调整（SetUsageRows）。
 
@@ -65,21 +66,48 @@ function quotaOf(u: CodingPlanUsage | null | undefined): CodingPlanQuota | null 
   if (!u || u.status !== 'ok') return null
   return u.fiveHour ?? u.weekly
 }
+// 余额型（DeepSeek）：环填充 = 余额余量（满环 = 预警值 ×10），不受已用/剩余模式影响。
+function balanceOf(u: CodingPlanUsage | null | undefined) {
+  if (!u || u.status !== 'ok') return null
+  return u.balance ?? null
+}
 // 按展示模式换算百分比：remaining 模式显示 100-已用。
 const dispPct = (q: CodingPlanQuota | null) =>
   q ? (mode.value === 'remaining' ? 100 - q.usedPercent : q.usedPercent) : 0
-// 颜色始终按已用程度分级（剩余模式下用量高仍是红色警示）。
-const ringColor = (q: CodingPlanQuota | null) =>
-  q ? LEVEL_COLOR[usageLevel(q.usedPercent)] : 'rgba(255,255,255,0.25)'
-const ringOffset = (q: CodingPlanQuota | null) => C * (1 - Math.min(100, Math.max(0, dispPct(q))) / 100)
-const ringText = (q: CodingPlanQuota | null) => (q ? `${Math.round(dispPct(q))}` : '—')
+// 环填充：余额型按余额余量，配额型按（模式换算后的）已用/剩余百分比。
+function ringPct(a: CodingPlanAccount, u: CodingPlanUsage | null | undefined): number {
+  const b = balanceOf(u)
+  if (b) return balancePct(b.total, a.alertAmount)
+  return Math.min(100, Math.max(0, dispPct(quotaOf(u))))
+}
+// 颜色：余额型按预警分档（跌破预警值即红），配额型始终按已用程度分级。
+function ringColor(a: CodingPlanAccount, u: CodingPlanUsage | null | undefined): string {
+  const b = balanceOf(u)
+  if (b) return LEVEL_COLOR[balanceLevel(b.total, a.alertAmount, b.available)]
+  const q = quotaOf(u)
+  return q ? LEVEL_COLOR[usageLevel(q.usedPercent)] : 'rgba(255,255,255,0.25)'
+}
+const ringOffset = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) =>
+  C * (1 - ringPct(a, u) / 100)
+const ringText = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
+  const q = quotaOf(u)
+  if (q) return `${Math.round(dispPct(q))}`
+  return balanceOf(u) ? `${Math.round(ringPct(a, u))}` : '—'
+}
 
 // 第二行文案：常态显示「重置 倒计时 · 周 X%」；无 5h 桶时退化显示周桶倒计时。
 // 剩余模式下周期数字同样换算为剩余并加「剩」前缀，避免与已用混淆。
-const line2 = (u: CodingPlanUsage | null | undefined) => {
+// 余额型显示「余额 ¥xx · 预警 ¥xx」。
+const line2 = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
   if (!u) return '加载中…'
   if (u.status === 'expired') return '密钥失效'
   if (u.status === 'error') return '查询失败'
+  if (u.balance) {
+    if (!u.balance.available) return '余额不足，无法调用'
+    const s = currencySymbol(u.balance.currency)
+    const base = `余额 ${s}${u.balance.total.toFixed(2)}`
+    return a.alertAmount > 0 ? `${base} · 预警 ${s}${a.alertAmount}` : base
+  }
   const weekly = (wk: CodingPlanQuota | null) => {
     if (!wk) return '无周限额'
     const v = mode.value === 'remaining' ? 100 - wk.usedPercent : wk.usedPercent
@@ -163,17 +191,17 @@ const cancelUsageConfig = Events.On('usage-overlay:config', onUsageConfig)
           cx="18"
           cy="18"
           :r="R"
-          :stroke="ringColor(quotaOf(usages[a.id]))"
+          :stroke="ringColor(a, usages[a.id])"
           :stroke-dasharray="C"
-          :stroke-dashoffset="ringOffset(quotaOf(usages[a.id]))"
+          :stroke-dashoffset="ringOffset(a, usages[a.id])"
         />
         <text class="num" x="18" y="18.5" text-anchor="middle" dominant-baseline="central">
-          {{ ringText(quotaOf(usages[a.id])) }}
+          {{ ringText(a, usages[a.id]) }}
         </text>
       </svg>
       <div class="txt">
         <div class="name">{{ a.name || providerMeta(a.provider).label }}</div>
-        <div class="sub">{{ line2(usages[a.id]) }}</div>
+        <div class="sub">{{ line2(a, usages[a.id]) }}</div>
       </div>
     </div>
 

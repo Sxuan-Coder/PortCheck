@@ -79,6 +79,7 @@ const form = reactive({
   region: defaultRegion('zhipu'),
   baseUrl: '',
   apiKey: '',
+  alertAmount: '', // 余额预警值（元），仅余额型供应商展示；空 = 不提醒
 })
 
 function resetForm() {
@@ -88,6 +89,7 @@ function resetForm() {
   form.region = defaultRegion('zhipu')
   form.baseUrl = ''
   form.apiKey = ''
+  form.alertAmount = ''
 }
 
 function openAdd() {
@@ -103,6 +105,7 @@ function openEdit(a: CodingPlanAccount) {
   form.region = meta.regions?.some((r) => r.value === a.baseUrl) ? a.baseUrl : defaultRegion(a.provider)
   form.baseUrl = a.baseUrl
   form.apiKey = a.apiKey
+  form.alertAmount = a.alertAmount > 0 ? String(a.alertAmount) : ''
   dialog.value = true
 }
 
@@ -130,6 +133,12 @@ async function save() {
     toast('查询端点必须是 https:// 开头的完整 URL', 'error')
     return
   }
+  // 余额预警值：空 = 0（不提醒）；非余额型供应商后端会归零，这里无需校验
+  const alertAmount = form.alertAmount.trim() === '' ? 0 : Number(form.alertAmount)
+  if (Number.isNaN(alertAmount) || alertAmount < 0) {
+    toast('余额预警值必须是不小于 0 的数字', 'error')
+    return
+  }
   saving.value = true
   try {
     const saved = await CodingPlanService.SaveCodingPlan({
@@ -138,6 +147,7 @@ async function save() {
       provider: form.provider,
       baseUrl: formBaseURL(),
       apiKey: form.apiKey.trim(),
+      alertAmount,
       createdAt: 0,
     })
     dialog.value = false
@@ -202,7 +212,7 @@ onUnmounted(() => {
     <div class="head">
       <div class="title">
         <h2>Coding Plan 用量</h2>
-        <p>5 小时窗口 / 周用量百分比监控，支持智谱 GLM · Kimi · MiniMax · ZenMux</p>
+        <p>5 小时窗口 / 周用量百分比监控，支持智谱 GLM · Kimi · MiniMax · ZenMux · DeepSeek（余额）</p>
       </div>
       <div class="actions">
         <span v-if="lastRefresh" class="updated">更新于 {{ lastRefresh }}</span>
@@ -216,7 +226,7 @@ onUnmounted(() => {
     <div v-if="!loading && accounts.length === 0" class="empty acrylic-card">
       <div class="empty-icon"><AppIcon name="usage" :size="26" /></div>
       <p class="empty-title">还没有监控任何 Coding Plan</p>
-      <p class="empty-hint">配置 API Key 后，即可在这里查看 5 小时 / 周用量百分比与重置倒计时</p>
+      <p class="empty-hint">配置 API Key 后，即可在这里查看 5 小时 / 周用量百分比与重置倒计时；DeepSeek 账户则展示余额与预警</p>
       <button class="add" @click="openAdd"><AppIcon name="plus" :size="13" /> 添加账号</button>
     </div>
 
@@ -261,6 +271,17 @@ onUnmounted(() => {
         <label v-if="providerMeta(form.provider).needURL" class="field">
           <span>查询端点</span>
           <input v-model="form.baseUrl" type="text" :placeholder="providerMeta(form.provider).urlHint" />
+        </label>
+
+        <label v-if="providerMeta(form.provider).isBalance" class="field">
+          <span>余额预警值（元，可选）</span>
+          <input
+            v-model="form.alertAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="如 10：余额低于该值时卡片变红提醒，留空则不提醒"
+          />
         </label>
 
         <label class="field">

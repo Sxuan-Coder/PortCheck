@@ -237,3 +237,75 @@ func TestZenMux小数百分比与USD(t *testing.T) {
 		t.Errorf("USD 文本 = %q", got)
 	}
 }
+
+// ── DeepSeek：余额解析与币种挑选 ──
+
+// 官方示例形态：金额为字符串数字、is_available 布尔、赠金/充值拆分。
+func TestDeepSeek余额解析(t *testing.T) {
+	body := mustJSON(t, `{
+		"is_available": true,
+		"balance_infos": [{
+			"currency": "CNY",
+			"total_balance": "110.00",
+			"granted_balance": "10.00",
+			"topped_up_balance": "100.00"
+		}]}`)
+	b := parseDeepSeekBalance(body)
+	if b == nil {
+		t.Fatalf("期望余额结构")
+	}
+	if b.Currency != "CNY" || !b.Available {
+		t.Errorf("币种/可用态解析错误：%q / %v", b.Currency, b.Available)
+	}
+	if b.Total != 110 || b.Granted != 10 || b.ToppedUp != 100 {
+		t.Errorf("金额解析错误：total=%v granted=%v toppedUp=%v", b.Total, b.Granted, b.ToppedUp)
+	}
+}
+
+// 双币种时优先 CNY；仅 USD 账户取 USD 条目。
+func TestDeepSeek优先CNY币种(t *testing.T) {
+	body := mustJSON(t, `{
+		"is_available": true,
+		"balance_infos": [
+			{ "currency": "USD", "total_balance": "5.50", "granted_balance": "0", "topped_up_balance": "5.50" },
+			{ "currency": "CNY", "total_balance": "39.80", "granted_balance": "0", "topped_up_balance": "39.80" }
+		]}`)
+	if b := parseDeepSeekBalance(body); b == nil || b.Currency != "CNY" || b.Total != 39.8 {
+		t.Errorf("双币种应优先 CNY，got %+v", b)
+	}
+
+	onlyUSD := mustJSON(t, `{
+		"is_available": false,
+		"balance_infos": [{ "currency": "USD", "total_balance": "5.50" }]}`)
+	b := parseDeepSeekBalance(onlyUSD)
+	if b == nil || b.Currency != "USD" || b.Available {
+		t.Errorf("仅 USD 时应取 USD 且 is_available=false，got %+v", b)
+	}
+}
+
+// balance_infos 缺失 / 空数组 / 全为非对象时不崩溃，返回 nil 由上层报错。
+func TestDeepSeek缺BalanceInfos不崩溃(t *testing.T) {
+	for _, s := range []string{`{}`, `{ "balance_infos": [] }`, `{ "balance_infos": [42] }`} {
+		if b := parseDeepSeekBalance(mustJSON(t, s)); b != nil {
+			t.Errorf("%s 不应产生余额结构", s)
+		}
+	}
+}
+
+// ── 供应商注册表 ──
+
+// 五家供应商全部注册且有默认显示名；查询函数非空。
+func Test供应商注册表全覆盖(t *testing.T) {
+	for _, p := range []string{
+		codingPlanZhipu, codingPlanKimi, codingPlanMiniMax, codingPlanZenMux, codingPlanDeepseek,
+	} {
+		provider, ok := codingPlanProviders[p]
+		if !ok {
+			t.Errorf("供应商 %q 未注册", p)
+			continue
+		}
+		if provider.label == "" || provider.query == nil {
+			t.Errorf("供应商 %q 注册不完整：label/query 为空", p)
+		}
+	}
+}
