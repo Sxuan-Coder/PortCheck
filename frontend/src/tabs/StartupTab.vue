@@ -171,7 +171,7 @@ onMounted(load)
 .row.body:hover { background: var(--row-hover); }
 .row.body.disabled { opacity: 0.72; }
 .c-name { color: var(--text-1); }
-.c-cmd { color: var(--text-3); font-size: 11px; font-family: "Cascadia Code", "Consolas", monospace; }
+.row.body .c-cmd { color: var(--text-3); font-size: 10px; font-family: inherit; }
 .c-act { display: flex; gap: 6px; justify-content: flex-end; }
 .tag { padding: 2px 8px; border-radius: 99px; font-size: 10px; color: var(--brand); background: var(--brand-glow); }
 .state { padding: 1px 8px; border-radius: 99px; font-size: 10px; }

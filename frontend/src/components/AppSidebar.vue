@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppIcon from './AppIcon.vue'
 import { checkUpdate } from '../composables/useUpdate'
+import { version } from '../../package.json'
 
 defineProps<{ active: string }>()
 defineEmits<{ (e: 'switch', tab: string): void }>()
@@ -41,7 +42,7 @@ const items: { id: string; icon: string; label: string }[] = [
       <button class="upd" title="检查更新" @click="checkUpdate()">
         <AppIcon name="refresh" :size="15" />
       </button>
-      <div class="ver">v2.4.0</div>
+      <div class="ver">v{{ version }}</div>
     </div>
   </aside>
 </template>
