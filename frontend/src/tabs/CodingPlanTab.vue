@@ -133,8 +133,9 @@ async function save() {
     toast('查询端点必须是 https:// 开头的完整 URL', 'error')
     return
   }
-  // 余额预警值：空 = 0（不提醒）；非余额型供应商后端会归零，这里无需校验
-  const alertAmount = form.alertAmount.trim() === '' ? 0 : Number(form.alertAmount)
+  // 余额预警值：number 输入的 v-model 会被 Vue 自动转成数字，不能用字符串方法；
+  // 空 = 0（不提醒）；非余额型供应商后端会归零，这里无需校验
+  const alertAmount = Number(form.alertAmount || 0)
   if (Number.isNaN(alertAmount) || alertAmount < 0) {
     toast('余额预警值必须是不小于 0 的数字', 'error')
     return

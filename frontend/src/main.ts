@@ -17,5 +17,15 @@ if (hash === '#/overlay' || hash === '#/usage-overlay') {
   document.body.style.background = 'transparent'
   createApp(hash === '#/overlay' ? PerfOverlay : UsageOverlay).mount('#app')
 } else {
-  createApp(App).mount('#app')
+  const app = createApp(App)
+  // 调试：把未捕获的组件/异步错误摘要写到窗口标题（生产环境无控制台可见）。
+  app.config.errorHandler = (err, _inst, info) => {
+    const msg = err instanceof Error ? `${err.message} @ ${err.stack?.split('\n')[1]?.trim() ?? ''}` : String(err)
+    document.title = `ERR[${info}] ${msg}`.slice(0, 180)
+  }
+  window.addEventListener('unhandledrejection', (e) => {
+    const r = e.reason
+    document.title = `REJ ${r instanceof Error ? r.message : String(r)}`.slice(0, 180)
+  })
+  app.mount('#app')
 }
