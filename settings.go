@@ -40,6 +40,12 @@ const (
 	overlayFontSizeDef = 12
 )
 
+// codingPlanRefreshMinutesDef 是 Coding Plan 刷新间隔默认值（分钟）。
+const codingPlanRefreshMinutesDef = 5
+
+// codingPlanRefreshMinutesWhitelist 是允许的刷新间隔（分钟）。
+var codingPlanRefreshMinutesWhitelist = map[int]bool{1: true, 3: true, 5: true, 10: true, 15: true, 30: true}
+
 // Settings 是应用的用户可配置项。
 type Settings struct {
 	Theme             string `json:"theme"`
@@ -54,6 +60,8 @@ type Settings struct {
 	UsageOverlayEnabled  bool   `json:"usageOverlayEnabled"`  // 用量悬浮窗开关，默认关闭
 	UsageOverlayPosition string `json:"usageOverlayPosition"` // topLeft / topRight，默认 topRight
 	UsageOverlayMode     string `json:"usageOverlayMode"`     // used / remaining，默认 used
+
+	CodingPlanRefreshMinutes int `json:"codingPlanRefreshMinutes"` // 用量查询自动刷新间隔（分钟），默认 5
 }
 
 // SettingsService 提供持久化配置读写与开机自启管理。
@@ -74,6 +82,8 @@ func DefaultSettings() Settings {
 		UsageOverlayEnabled:  false,
 		UsageOverlayPosition: overlayPositionTopRight,
 		UsageOverlayMode:     usageOverlayModeUsed,
+
+		CodingPlanRefreshMinutes: codingPlanRefreshMinutesDef,
 	}
 }
 
@@ -119,6 +129,14 @@ func normalizeUsageOverlayMode(v string) string {
 	return usageOverlayModeUsed
 }
 
+// normalizeCodingPlanRefreshMinutes 校验刷新间隔白名单，非法值回退 5 分钟。
+func normalizeCodingPlanRefreshMinutes(v int) int {
+	if codingPlanRefreshMinutesWhitelist[v] {
+		return v
+	}
+	return codingPlanRefreshMinutesDef
+}
+
 // settingsPath 返回 %APPDATA%/PortCheck/settings.json。
 func settingsPath() (string, error) {
 	appData, err := os.UserConfigDir()
@@ -157,6 +175,7 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
 	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
 	settings.UsageOverlayMode = normalizeUsageOverlayMode(settings.UsageOverlayMode)
+	settings.CodingPlanRefreshMinutes = normalizeCodingPlanRefreshMinutes(settings.CodingPlanRefreshMinutes)
 	return settings, nil
 }
 
@@ -167,6 +186,7 @@ func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
 	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
 	settings.UsageOverlayMode = normalizeUsageOverlayMode(settings.UsageOverlayMode)
+	settings.CodingPlanRefreshMinutes = normalizeCodingPlanRefreshMinutes(settings.CodingPlanRefreshMinutes)
 	path, err := settingsPath()
 	if err != nil {
 		return err

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Coding Plan 用量页：账号卡片墙 + 添加/编辑弹窗。
-// 用量每 5 分钟自动刷新一次；倒计时每 30 秒本地重算（不重新请求接口）。
+// 用量按设置项自动定时刷新（默认 5 分钟）；倒计时每 30 秒本地重算（不重新请求接口）。
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { Dialogs, Events } from '@wailsio/runtime'
 import { CodingPlanService } from '../../bindings/github.com/Sxuan-Coder/PortCheck'
@@ -12,7 +12,7 @@ import { useSettings } from '../composables/useSettings'
 import { PROVIDERS, defaultRegion, providerMeta } from '../lib/codingplans'
 
 const { toast } = useToast()
-const { enableUsageOverlayIfDisabled } = useSettings()
+const { settings, enableUsageOverlayIfDisabled } = useSettings()
 
 const accounts = ref<CodingPlanAccount[]>([])
 const usages = ref<Record<string, CodingPlanUsage>>({})
@@ -21,10 +21,15 @@ const refreshing = ref(false)
 const lastRefresh = ref('')
 const now = ref(Date.now())
 
-const REFRESH_MS = 5 * 60 * 1000
+// 自动刷新间隔可由设置页调整（默认 5 分钟），watch 即时重启定时器。
 const TICK_MS = 30 * 1000
 let pollTimer: number | undefined
 let tickTimer: number | undefined
+
+function schedulePoll() {
+  if (pollTimer) window.clearInterval(pollTimer)
+  pollTimer = window.setInterval(() => refreshAll(false), settings.value.codingPlanRefreshMinutes * 60 * 1000)
+}
 
 async function load() {
   loading.value = true
@@ -198,9 +203,14 @@ async function remove(a: CodingPlanAccount) {
 onMounted(async () => {
   await load()
   await refreshAll(false)
-  pollTimer = window.setInterval(() => refreshAll(false), REFRESH_MS)
+  schedulePoll()
   tickTimer = window.setInterval(() => (now.value = Date.now()), TICK_MS)
 })
+
+watch(
+  () => settings.value.codingPlanRefreshMinutes,
+  () => schedulePoll(),
+)
 
 onUnmounted(() => {
   if (pollTimer) window.clearInterval(pollTimer)

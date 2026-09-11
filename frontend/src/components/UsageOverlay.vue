@@ -10,10 +10,9 @@ import { usageLevel, LEVEL_COLOR, countdown, providerMeta, balanceLevel, balance
 // 每个账号一行：左侧圆环显示 5 小时窗口百分比（已用/剩余由设置项 usageOverlayMode
 // 决定，圆环颜色始终按「已用程度」分级），右侧账号名 + 「重置倒计时 · 周百分比」；
 // 余额型供应商（DeepSeek）的圆环按「余额余量 / 预警值 ×10」填充、颜色按预警分档。
-// 数据自取：启动查询一次 + 每 5 分钟轮询；主窗口增删账号时通过 codingplan:changed
+// 数据自取：启动查询一次 + 按设置间隔定时轮询（默认 5 分钟）；主窗口增删账号时通过 codingplan:changed
 // 事件即时刷新。窗口高度由后端按行数调整（SetUsageRows）。
 
-const REFRESH_MS = 5 * 60 * 1000
 const TICK_MS = 30 * 1000
 const MAX_ACCOUNTS = 3
 
@@ -22,9 +21,16 @@ const usages = ref<Record<string, CodingPlanUsage>>({})
 const now = ref(Date.now())
 // 百分比展示模式：used=已用（默认）/ remaining=剩余；启动读一次，设置页通过事件实时推送。
 const mode = ref<'used' | 'remaining'>('used')
+// 自动刷新间隔（分钟）：启动读一次设置，设置页经 usage-overlay:config 事件实时推送。
+const refreshMinutes = ref(5)
 
 let refreshTimer: number | undefined
 let tickTimer: number | undefined
+
+function scheduleRefresh() {
+  if (refreshTimer) window.clearInterval(refreshTimer)
+  refreshTimer = window.setInterval(refresh, refreshMinutes.value * 60 * 1000)
+}
 
 // 圆环几何参数（viewBox 36x36）
 const R = 15.5
@@ -138,22 +144,29 @@ function onChanged(ev: any) {
   }
 }
 
-// 设置页切换显示模式时实时推送（载荷兼容 ev.data 包装形态）。
+// 设置页切换显示模式 / 刷新间隔时实时推送（载荷兼容 ev.data 包装形态）。
 function onUsageConfig(ev: any) {
   const raw = ev && ev.data ? ev.data : ev
-  const cfg = (raw && typeof raw === 'object' ? raw : {}) as { mode?: string }
+  const cfg = (raw && typeof raw === 'object' ? raw : {}) as { mode?: string; refreshMinutes?: number }
   if (cfg.mode === 'used' || cfg.mode === 'remaining') mode.value = cfg.mode
+  if (Number.isFinite(cfg.refreshMinutes) && (cfg.refreshMinutes as number) > 0) {
+    refreshMinutes.value = cfg.refreshMinutes as number
+    scheduleRefresh()
+  }
 }
 
 onMounted(async () => {
   try {
     const s = await SettingsService.GetSettings()
     if (s.usageOverlayMode === 'remaining') mode.value = 'remaining'
+    if ([1, 3, 5, 10, 15, 30].includes(s.codingPlanRefreshMinutes)) {
+      refreshMinutes.value = s.codingPlanRefreshMinutes
+    }
   } catch {
     /* 保持默认 */
   }
   refresh()
-  refreshTimer = window.setInterval(refresh, REFRESH_MS)
+  scheduleRefresh()
   tickTimer = window.setInterval(() => (now.value = Date.now()), TICK_MS)
 })
 

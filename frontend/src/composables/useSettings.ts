@@ -16,6 +16,7 @@ export interface AppSettings {
   usageOverlayEnabled: boolean
   usageOverlayPosition: 'topLeft' | 'topRight'
   usageOverlayMode: 'used' | 'remaining'
+  codingPlanRefreshMinutes: number
 }
 
 const settings = ref<AppSettings>({
@@ -30,6 +31,7 @@ const settings = ref<AppSettings>({
   usageOverlayEnabled: false,
   usageOverlayPosition: 'topRight',
   usageOverlayMode: 'used',
+  codingPlanRefreshMinutes: 5,
 })
 
 // loaded 标记后端配置是否已成功加载到内存。save/applyOverlay 前必须为 true，
@@ -66,6 +68,9 @@ export function useSettings() {
         usageOverlayEnabled: !!s.usageOverlayEnabled,
         usageOverlayPosition: s.usageOverlayPosition === 'topLeft' ? 'topLeft' : 'topRight',
         usageOverlayMode: s.usageOverlayMode === 'remaining' ? 'remaining' : 'used',
+        codingPlanRefreshMinutes: [1, 3, 5, 10, 15, 30].includes(s.codingPlanRefreshMinutes)
+          ? s.codingPlanRefreshMinutes
+          : 5,
       }
       loaded.value = true
 

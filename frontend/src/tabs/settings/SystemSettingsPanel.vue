@@ -29,6 +29,14 @@ const usageOverlayModeOptions = [
   { value: 'used', label: '已用百分比' },
   { value: 'remaining', label: '剩余百分比' },
 ]
+const codingPlanIntervalOptions = [
+  { value: 1, label: '1 分钟' },
+  { value: 3, label: '3 分钟' },
+  { value: 5, label: '5 分钟' },
+  { value: 10, label: '10 分钟' },
+  { value: 15, label: '15 分钟' },
+  { value: 30, label: '30 分钟' },
+]
 
 const autostartEnabled = ref(false)
 const changingScope = ref(false)
@@ -123,6 +131,17 @@ async function onUsageOverlayPositionChange(e: Event) {
 async function onUsageOverlayModeChange(e: Event) {
   settings.value.usageOverlayMode = (e.target as HTMLSelectElement).value as 'used' | 'remaining'
   Events.Emit('usage-overlay:config', { mode: settings.value.usageOverlayMode })
+  try {
+    await SettingsService.SaveSettings(settings.value)
+  } catch {
+    /* 忽略持久化失败 */
+  }
+}
+
+// 刷新间隔切换：推送给用量悬浮窗（独立 webview）即时重置定时器，并静默持久化。
+async function onCodingPlanIntervalChange(e: Event) {
+  settings.value.codingPlanRefreshMinutes = Number((e.target as HTMLSelectElement).value)
+  Events.Emit('usage-overlay:config', { refreshMinutes: settings.value.codingPlanRefreshMinutes })
   try {
     await SettingsService.SaveSettings(settings.value)
   } catch {
@@ -243,6 +262,28 @@ async function onOverlayFontSizeChange(e: Event) {
           >
             <option value="currentUser">当前用户</option>
             <option value="system">整个系统</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 用量查询 ============ -->
+    <section class="section">
+      <div class="section-title">用量查询</div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">刷新间隔</span>
+            <span class="setting-desc">Coding Plan 用量页与用量悬浮窗的自动刷新频率</span>
+          </div>
+          <select
+            class="setting-select"
+            :value="settings.codingPlanRefreshMinutes"
+            @change="onCodingPlanIntervalChange"
+          >
+            <option v-for="opt in codingPlanIntervalOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
           </select>
         </div>
       </div>

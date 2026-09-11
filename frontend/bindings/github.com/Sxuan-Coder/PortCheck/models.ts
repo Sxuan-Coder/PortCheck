@@ -512,6 +512,11 @@ export class Settings {
      */
     "usageOverlayMode": string;
 
+    /**
+     * 用量查询自动刷新间隔（分钟），默认 5
+     */
+    "codingPlanRefreshMinutes": number;
+
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
         if (!("theme" in $$source)) {
@@ -546,6 +551,9 @@ export class Settings {
         }
         if (!("usageOverlayMode" in $$source)) {
             this["usageOverlayMode"] = "";
+        }
+        if (!("codingPlanRefreshMinutes" in $$source)) {
+            this["codingPlanRefreshMinutes"] = 0;
         }
 
         Object.assign(this, $$source);
