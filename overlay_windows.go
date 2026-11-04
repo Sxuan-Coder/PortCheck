@@ -7,10 +7,12 @@ import (
 )
 
 var (
-	user32DLL         = syscall.NewLazyDLL("user32.dll")
-	procGetWindowLong = user32DLL.NewProc("GetWindowLongPtrW")
-	procSetWindowLong = user32DLL.NewProc("SetWindowLongPtrW")
-	procSetWindowPos  = user32DLL.NewProc("SetWindowPos")
+	user32DLL          = syscall.NewLazyDLL("user32.dll")
+	procGetWindowLong  = user32DLL.NewProc("GetWindowLongPtrW")
+	procSetWindowLong  = user32DLL.NewProc("SetWindowLongPtrW")
+	procSetWindowPos   = user32DLL.NewProc("SetWindowPos")
+	procInvalidateRect = user32DLL.NewProc("InvalidateRect")
+	procUpdateWindow   = user32DLL.NewProc("UpdateWindow")
 )
 
 // fixOverlayExStyle 修正悬浮窗的扩展窗口样式。
@@ -43,4 +45,22 @@ func fixOverlayExStyle(win application.Window) {
 	procSetWindowLong.Call(hwnd, gwlExStyle, newStyle)
 	procSetWindowPos.Call(hwnd, 0, 0, 0, 0, 0,
 		uintptr(swpNoSize|swpNoMove|swpNoZOrder|swpFrameChanged))
+}
+
+// invalidateMainWindow 强制主窗口整区重绘。悬浮窗（透明置顶分层窗口）创建或销毁
+// 会扰动 DWM 合成，主窗口 WebView2 暴露出的旧帧区域可能收不到 invalidation，
+// 在设置页等内容区留下错位残影（表现为元素被渲染两次、轻微错位）。
+// 这里对主窗口客户区整体 InvalidateRect + UpdateWindow，主动清掉脏像素。
+// 非主线程安全面 OK：InvalidateRect/UpdateWindow 仅投递绘制消息，Wails 事件循环
+// 会处理；主窗口未创建（mainWindow == nil）时静默跳过。
+func invalidateMainWindow() {
+	if mainWindow == nil {
+		return
+	}
+	hwnd := uintptr(mainWindow.NativeWindow())
+	if hwnd == 0 {
+		return
+	}
+	procInvalidateRect.Call(hwnd, 0, 1) // NULL 区域 + ERASE 背景：整区失效
+	procUpdateWindow.Call(hwnd)
 }

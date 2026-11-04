@@ -19,6 +19,10 @@ var appIcon []byte
 // overlaySvc 作为包级变量，便于在主窗口导航完成后调用 RestoreIfEnabled 恢复悬浮窗。
 var overlaySvc OverlayService
 
+// mainWindow 供 OverlayService 在悬浮窗创建/关闭后强制主窗口重绘，
+// 清除透明置顶窗口增删扰动 DWM 合成留下的旧帧残影（见 invalidateMainWindow）。
+var mainWindow application.Window
+
 func main() {
 	// 提权子进程模式：不启动 GUI，执行单次写操作后立即退出。
 	if isElevatedHelper(os.Args) {
@@ -61,6 +65,7 @@ func main() {
 		BackgroundColour: application.NewRGB(11, 12, 16),
 		URL:              "/",
 	})
+	mainWindow = window
 
 	// 关闭按钮（前端标题栏）拦截为"最小化到托盘"，保持后台常驻。
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
