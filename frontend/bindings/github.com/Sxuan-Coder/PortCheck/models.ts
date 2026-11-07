@@ -329,6 +329,98 @@ export class CodingPlanUsage {
     }
 }
 
+/**
+ * FileLockEntry 描述一个占用文件的进程。
+ */
+export class FileLockEntry {
+    "pid": number;
+    "process": string;
+    "exePath": string;
+    "appType": string;
+
+    /**
+     * 进程创建时间，Unix 毫秒；0 表示未知
+     */
+    "startTime": number;
+
+    /** Creates a new FileLockEntry instance. */
+    constructor($$source: Partial<FileLockEntry> = {}) {
+        if (!("pid" in $$source)) {
+            this["pid"] = 0;
+        }
+        if (!("process" in $$source)) {
+            this["process"] = "";
+        }
+        if (!("exePath" in $$source)) {
+            this["exePath"] = "";
+        }
+        if (!("appType" in $$source)) {
+            this["appType"] = "";
+        }
+        if (!("startTime" in $$source)) {
+            this["startTime"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FileLockEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FileLockEntry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FileLockEntry($$parsedSource as Partial<FileLockEntry>);
+    }
+}
+
+/**
+ * FileLockResult 是文件占用查询结果。
+ */
+export class FileLockResult {
+    "entries": FileLockEntry[];
+
+    /**
+     * 实际参与查询的文件数
+     */
+    "scanned": number;
+
+    /**
+     * 被隔离的问题文件等提示
+     */
+    "warnings": string[];
+
+    /** Creates a new FileLockResult instance. */
+    constructor($$source: Partial<FileLockResult> = {}) {
+        if (!("entries" in $$source)) {
+            this["entries"] = [];
+        }
+        if (!("scanned" in $$source)) {
+            this["scanned"] = 0;
+        }
+        if (!("warnings" in $$source)) {
+            this["warnings"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FileLockResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FileLockResult {
+        const $$createField0_0 = $$createType5;
+        const $$createField2_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("entries" in $$parsedSource) {
+            $$parsedSource["entries"] = $$createField0_0($$parsedSource["entries"]);
+        }
+        if ("warnings" in $$parsedSource) {
+            $$parsedSource["warnings"] = $$createField2_0($$parsedSource["warnings"]);
+        }
+        return new FileLockResult($$parsedSource as Partial<FileLockResult>);
+    }
+}
+
 export class KillProcessResult {
     "pid": number;
     "message": string;
@@ -451,7 +543,7 @@ export class PortListResult {
      * Creates a new PortListResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PortListResult {
-        const $$createField0_0 = $$createType5;
+        const $$createField0_0 = $$createType8;
         const $$createField5_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ports" in $$parsedSource) {
@@ -816,6 +908,8 @@ const $$createType0 = CodingPlanQuota.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = CodingPlanBalance.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = PortEntry.createFrom;
+const $$createType4 = FileLockEntry.createFrom;
 const $$createType5 = $Create.Array($$createType4);
 const $$createType6 = $Create.Array($Create.Any);
+const $$createType7 = PortEntry.createFrom;
+const $$createType8 = $Create.Array($$createType7);

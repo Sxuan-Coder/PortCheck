@@ -9,6 +9,7 @@ import UpdateDialog from './components/UpdateDialog.vue'
 import ProcessesTab from './tabs/ProcessesTab.vue'
 import PerformanceTab from './tabs/PerformanceTab.vue'
 import PortsTab from './tabs/PortsTab.vue'
+import FileLockTab from './tabs/FileLockTab.vue'
 import ServicesTab from './tabs/ServicesTab.vue'
 import StartupTab from './tabs/StartupTab.vue'
 import CodingPlanTab from './tabs/CodingPlanTab.vue'
@@ -42,6 +43,7 @@ onMounted(() => {
         <ProcessesTab v-show="active === 'processes'" />
         <PerformanceTab v-if="active === 'performance'" />
         <PortsTab v-show="active === 'ports'" />
+        <FileLockTab v-if="active === 'filelock'" />
         <ServicesTab v-if="active === 'services'" />
         <StartupTab v-if="active === 'startup'" />
         <CodingPlanTab v-if="active === 'codingplan'" />

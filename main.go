@@ -42,6 +42,7 @@ func main() {
 			application.NewService(monitorSvc),
 			application.NewService(&ServicesService{}),
 			application.NewService(&StartupService{}),
+			application.NewService(&FileLockService{}),
 			application.NewService(&CodingPlanService{}),
 			application.NewService(&UpdateService{}),
 			application.NewService(&SettingsService{}),
@@ -61,6 +62,7 @@ func main() {
 		Height:           640,
 		MinWidth:         900,
 		MinHeight:        600,
+		EnableFileDrop:   true, // 文件占用页依赖系统拖放解析完整文件路径（data-file-drop-target）
 		Frameless:        true, // 无边框：标题栏由前端自绘，通过 --wails-draggable: drag 拖动
 		BackgroundColour: application.NewRGB(11, 12, 16),
 		URL:              "/",
@@ -80,6 +82,22 @@ func main() {
 		overlayRestored.Do(func() {
 			overlaySvc.RestoreIfEnabled()
 		})
+	})
+
+	// 文件拖放桥接：框架的 WindowFilesDropped 只分发给 Go 侧监听者，不会广播到前端
+	// 事件通道，前端 Events.On("common:WindowFilesDropped") 永远收不到；
+	// 这里在 Go 侧接管后手动以同名事件转发（载荷仅含 filenames，够文件占用页使用）。
+	window.OnWindowEvent(events.Common.WindowFilesDropped, func(ev *application.WindowEvent) {
+		files := ev.Context().DroppedFiles()
+		if len(files) == 0 {
+			return
+		}
+		if app := application.Get(); app != nil {
+			app.Event.EmitEvent(&application.CustomEvent{
+				Name: "common:WindowFilesDropped",
+				Data: map[string]any{"filenames": files},
+			})
+		}
 	})
 
 	// 系统托盘：双击唤起主面板，右键菜单提供显示/退出。
