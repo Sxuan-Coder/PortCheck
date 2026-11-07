@@ -139,7 +139,7 @@ function singleColor(cpu: number) {
     </div>
 
     <div class="table">
-      <div class="thead">
+      <div ref="bodyEl" class="tbody scroll" @scroll.passive="onScroll">
         <div class="row head">
           <div class="c-name">名称</div>
           <div class="c-pid">PID</div>
@@ -150,8 +150,6 @@ function singleColor(cpu: number) {
           <div class="c-io">I/O</div>
           <div class="c-act">操作</div>
         </div>
-      </div>
-      <div ref="bodyEl" class="tbody scroll" @scroll.passive="onScroll">
         <div :style="{ height: totalHeight + 'px', position: 'relative' }">
           <div :style="{ height: padTop + 'px' }" />
           <div
@@ -294,6 +292,9 @@ function singleColor(cpu: number) {
   align-items: center;
 }
 .row.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 8px 12px;
   background: var(--header-bg);
   border-bottom: 1px solid var(--hairline);

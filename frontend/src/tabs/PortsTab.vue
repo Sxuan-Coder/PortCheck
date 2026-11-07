@@ -207,17 +207,17 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="table">
-      <div class="thead row">
-        <div class="c-proto">协议</div>
-        <div class="c-port">端口</div>
-        <div class="c-addr">本地地址</div>
-        <div class="c-remote">远程地址</div>
-        <div class="c-state">状态</div>
-        <div class="c-proc">进程</div>
-        <div class="c-pid">PID</div>
-        <div class="c-act">操作</div>
-      </div>
       <div class="tbody scroll">
+        <div class="thead row">
+          <div class="c-proto">协议</div>
+          <div class="c-port">端口</div>
+          <div class="c-addr">本地地址</div>
+          <div class="c-remote">远程地址</div>
+          <div class="c-state">状态</div>
+          <div class="c-proc">进程</div>
+          <div class="c-pid">PID</div>
+          <div class="c-act">操作</div>
+        </div>
         <div v-if="!loading && displayed.length === 0" class="empty">没有匹配的端口</div>
         <div v-for="p in displayed" :key="p._id" class="row body">
           <div class="c-proto"><span class="badge" :class="p.protocol.toLowerCase()">{{ p.protocol }}</span></div>
@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
 .spinning { display: inline-block; animation: spin 0.9s linear infinite; }
 .table { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--panel-bg); overflow: hidden; min-height: 0; }
 .row { display: grid; grid-template-columns: 70px 80px 1.6fr 1.4fr 110px 1.8fr 70px 118px; align-items: center; }
-.thead { padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
+.thead { position: sticky; top: 0; z-index: 1; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
 .c-pid, .c-act, .c-port { text-align: right; padding-right: 6px; }
 .c-addr, .c-remote, .c-proc { overflow: hidden; }
 .tbody { flex: 1; overflow-y: auto; min-height: 0; }

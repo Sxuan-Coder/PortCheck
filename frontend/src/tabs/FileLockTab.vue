@@ -105,15 +105,15 @@ function formatTime(ms: number) {
     </div>
 
     <div class="table">
-      <div class="thead row">
-        <div class="c-proc">进程</div>
-        <div class="c-pid">PID</div>
-        <div class="c-type">类型</div>
-        <div class="c-path">可执行路径</div>
-        <div class="c-time">进程启动时间</div>
-        <div class="c-act">操作</div>
-      </div>
       <div class="tbody scroll">
+        <div class="thead row">
+          <div class="c-proc">进程</div>
+          <div class="c-pid">PID</div>
+          <div class="c-type">类型</div>
+          <div class="c-path">可执行路径</div>
+          <div class="c-time">进程启动时间</div>
+          <div class="c-act">操作</div>
+        </div>
         <div v-if="!loading && result.entries.length === 0" class="empty">
           <template v-if="path">没有发现占用该路径的进程</template>
           <template v-else>输入路径或拖入文件开始查询</template>
@@ -155,7 +155,7 @@ function formatTime(ms: number) {
 .warn-item { font-size: 11px; color: var(--amber); background: var(--field-bg); border: 1px solid var(--hairline); border-radius: var(--radius-sm); padding: 5px 9px; }
 .table { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--panel-bg); overflow: hidden; min-height: 0; }
 .row { display: grid; grid-template-columns: 1.2fr 70px 110px 1.8fr 150px 90px; align-items: center; }
-.thead { padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
+.thead { position: sticky; top: 0; z-index: 1; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
 .c-pid, .c-time, .c-act { text-align: right; padding-right: 6px; }
 .c-path { overflow: hidden; }
 .tbody { flex: 1; overflow-y: auto; min-height: 0; }
