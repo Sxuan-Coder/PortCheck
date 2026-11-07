@@ -147,6 +147,7 @@ function singleColor(cpu: number) {
           <div class="c-cpu2">CPU 单核</div>
           <div class="c-mem">内存</div>
           <div class="c-commit">提交内存</div>
+          <div class="c-io">I/O</div>
           <div class="c-act">操作</div>
         </div>
       </div>
@@ -174,6 +175,9 @@ function singleColor(cpu: number) {
             </div>
             <div class="c-mem mono">{{ formatBytes(p.memBytes) }}</div>
             <div class="c-commit mono">{{ formatBytes(p.commitBytes) }}</div>
+            <div class="c-io mono" title="读+写传输速率（含磁盘/网络）">
+              {{ p.ioBps && p.ioBps > 0 ? formatBytes(p.ioBps) + '/s' : '—' }}
+            </div>
             <div class="c-act">
               <button
                 v-if="!isProtected(p.pid)"
@@ -286,7 +290,7 @@ function singleColor(cpu: number) {
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 70px 84px 84px 104px 96px 80px;
+  grid-template-columns: 1fr 70px 84px 84px 104px 96px 96px 80px;
   align-items: center;
 }
 .row.head {
@@ -302,6 +306,7 @@ function singleColor(cpu: number) {
 .c-cpu2,
 .c-mem,
 .c-commit,
+.c-io,
 .c-act {
   text-align: right;
   padding-right: 4px;

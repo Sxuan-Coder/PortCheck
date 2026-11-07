@@ -34,6 +34,8 @@ type MonitorService struct {
 
 	// 进程 CPU 差值状态：上一秒每个 PID 的累计 CPU 时间（100ns 刻度）。
 	prevProcTimes map[uint32]int64
+	// 进程 I/O 差值状态：上一秒每个 PID 的累计读+写传输字节。
+	prevIoTimes map[uint32]uint64
 	// 整机 CPU 差值状态：上一秒的 idle/kernel/user 累计时间。
 	prevIdle   int64
 	prevKernel int64
@@ -50,6 +52,7 @@ func (s *MonitorService) ServiceStartup(ctx context.Context, _ application.Servi
 	s.intervalCh = make(chan time.Duration, 1)
 	s.numCores, s.cpuName = readCPUInfo()
 	s.prevProcTimes = map[uint32]int64{}
+	s.prevIoTimes = map[uint32]uint64{}
 	s.prevWhen = time.Now()
 	if settings, err := (&SettingsService{}).GetSettings(); err == nil {
 		s.foregroundIntervalMs.Store(int64(settings.RefreshIntervalMs))
