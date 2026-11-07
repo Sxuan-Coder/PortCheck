@@ -6,10 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"sort"
-	"strconv"
-	"strings"
 	"syscall"
 	"unsafe"
 
@@ -139,26 +136,45 @@ func (s *PortService) ListPorts() (PortListResult, error) {
 	return result, nil
 }
 
+// KillProcess 结束目标进程及其进程树（原生实现，叶子优先终止）。
+// 语义：树枚举失败回退单进程结束；部分后代失败时报告明细且不再单杀根；
+// 根进程打不开时按错误分类返回（权限不足等）。
 func (s *PortService) KillProcess(pid uint32) (KillProcessResult, error) {
 	if err := validateKillPID(pid); err != nil {
 		return KillProcessResult{PID: pid}, err
 	}
 
-	if err := taskkillProcessTree(pid); err == nil {
-		return KillProcessResult{
-			PID:     pid,
-			Message: fmt.Sprintf("已强制结束 PID %d 对应的进程树", pid),
-		}, nil
+	report, err := terminateTree(pid)
+	if err == nil {
+		return KillProcessResult{PID: pid, Message: treeKillMessage(pid, report)}, nil
 	}
-
-	if err := terminateProcess(pid); err != nil {
-		return KillProcessResult{PID: pid}, err
+	if errors.Is(err, errTreeEnumerate) {
+		// 无法可靠构建进程树，回退单进程结束。
+		if terr := terminateProcess(pid); terr != nil {
+			return KillProcessResult{PID: pid}, classifyActionError(terr)
+		}
+		return KillProcessResult{PID: pid, Message: fmt.Sprintf("已结束 PID %d 对应的进程", pid)}, nil
 	}
+	if report != nil && len(report.Killed) > 0 {
+		// 部分成功：已结束的不能白杀，但也不掩盖失败明细，更不重复单杀根进程。
+		return KillProcessResult{PID: pid}, fmt.Errorf("已结束 %d 个进程，但未全部成功：%w", len(report.Killed), err)
+	}
+	return KillProcessResult{PID: pid}, classifyActionError(err)
+}
 
-	return KillProcessResult{
-		PID:     pid,
-		Message: fmt.Sprintf("已结束 PID %d 对应的进程", pid),
-	}, nil
+// treeKillMessage 依据树结束报告组装用户可读的结果描述。
+func treeKillMessage(pid uint32, report *TreeKillReport) string {
+	msg := fmt.Sprintf("已结束 PID %d 对应的进程", pid)
+	if len(report.Killed) > 1 {
+		msg = fmt.Sprintf("已结束 PID %d 及其 %d 个子进程", pid, len(report.Killed)-1)
+	}
+	if report.Pruned > 0 {
+		msg += fmt.Sprintf("，保护跳过 %d 个系统相关进程", report.Pruned)
+	}
+	if report.Skipped > 0 {
+		msg += fmt.Sprintf("，%d 个进程身份无法验证已跳过", report.Skipped)
+	}
+	return msg
 }
 
 func terminateProcess(pid uint32) error {
@@ -184,20 +200,6 @@ func terminateProcess(pid uint32) error {
 	}
 
 	return nil
-}
-
-func taskkillProcessTree(pid uint32) error {
-	cmd := exec.Command("taskkill", "/PID", strconv.FormatUint(uint64(pid), 10), "/T", "/F")
-	output, err := cmd.CombinedOutput()
-	if err == nil {
-		return nil
-	}
-
-	message := strings.TrimSpace(string(output))
-	if message == "" {
-		message = err.Error()
-	}
-	return fmt.Errorf("结束进程失败，可能需要管理员权限或该进程不允许结束：%s", message)
 }
 
 func validateKillPID(pid uint32) error {

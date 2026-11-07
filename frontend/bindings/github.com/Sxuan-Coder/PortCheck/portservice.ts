@@ -20,6 +20,11 @@ export function CloseConnection(req: $models.CloseConnRequest): $CancellableProm
     });
 }
 
+/**
+ * KillProcess 结束目标进程及其进程树（原生实现，叶子优先终止）。
+ * 语义：树枚举失败回退单进程结束；部分后代失败时报告明细且不再单杀根；
+ * 根进程打不开时按错误分类返回（权限不足等）。
+ */
 export function KillProcess(pid: number): $CancellablePromise<$models.KillProcessResult> {
     return $Call.ByID(1369868295, pid).then(($result: any) => {
         return $$createType1($result);
