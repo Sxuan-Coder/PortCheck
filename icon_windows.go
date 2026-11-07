@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"image"
@@ -73,12 +74,15 @@ var (
 	procDeleteObjectIcon  = modGdi32Icon.NewProc("DeleteObject")
 )
 
-// 图标缓存：key 为规范化路径，value 为 data URL（失败缓存为空串）。
+// 图标缓存：iconCache 的 key 为规范化路径，value 为 data URL（失败缓存为空串）；
+// iconContentCache 按 PNG 内容哈希去重——不同路径提取出相同图标时共享同一份
+// base64 字符串，避免同一图标在缓存与推送中重复占用内存。
 var (
-	iconCacheMu  sync.Mutex
-	iconCache    = map[string]string{}
-	iconEmitted  = map[string]bool{} // 进程 tick 每路径只推送一次，前端自行记忆
-	iconInflight = map[string]bool{}
+	iconCacheMu      sync.Mutex
+	iconCache        = map[string]string{}
+	iconEmitted      = map[string]bool{} // 进程 tick 每路径只推送一次，前端自行记忆
+	iconInflight     = map[string]bool{}
+	iconContentCache = map[[sha256.Size]byte]string{}
 )
 
 func normalizeIconPath(path string) string {
@@ -156,7 +160,21 @@ func extractIconDataURL(path string) string {
 	if err != nil || len(pngBytes) == 0 {
 		return fallbackAppIconDataURL()
 	}
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngBytes)
+	return iconDataURLOfPNG(pngBytes)
+}
+
+// iconDataURLOfPNG 按内容哈希去重生成 data URL：相同 PNG 字节只编码一次，
+// 后续命中直接复用同一份不可变字符串。调用方不持有 iconCacheMu。
+func iconDataURLOfPNG(pngBytes []byte) string {
+	key := sha256.Sum256(pngBytes)
+	iconCacheMu.Lock()
+	defer iconCacheMu.Unlock()
+	if url, ok := iconContentCache[key]; ok {
+		return url
+	}
+	url := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngBytes)
+	iconContentCache[key] = url
+	return url
 }
 
 // fallbackAppIconDataURL 使用嵌入的 PortCheck 应用图标（main.go 的 appIcon）。
