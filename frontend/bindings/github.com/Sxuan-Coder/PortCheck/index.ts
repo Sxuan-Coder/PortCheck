@@ -3,6 +3,7 @@
 
 import * as CodingPlanService from "./codingplanservice.js";
 import * as FileLockService from "./filelockservice.js";
+import * as HistoryService from "./historyservice.js";
 import * as MonitorService from "./monitorservice.js";
 import * as OverlayService from "./overlayservice.js";
 import * as PortService from "./portservice.js";
@@ -13,6 +14,7 @@ import * as UpdateService from "./updateservice.js";
 export {
     CodingPlanService,
     FileLockService,
+    HistoryService,
     MonitorService,
     OverlayService,
     PortService,
@@ -31,6 +33,8 @@ export {
     CodingPlanUsage,
     FileLockEntry,
     FileLockResult,
+    HistoryPoint,
+    HistorySeries,
     KillProcessResult,
     PortEntry,
     PortListResult,

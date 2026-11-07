@@ -421,6 +421,101 @@ export class FileLockResult {
     }
 }
 
+/**
+ * HistoryPoint 是分桶后的一个数据点；HasData=false 表示该桶无采样（断档）。
+ */
+export class HistoryPoint {
+    /**
+     * Unix 毫秒
+     */
+    "ts": number;
+
+    /**
+     * 均值百分比 0-100
+     */
+    "cpu": number;
+    "cpuPeak": number;
+    "memMB": number;
+    "commitMB": number;
+    "memTotalMB": number;
+    "tcp": number;
+    "udp": number;
+    "hasData": boolean;
+
+    /** Creates a new HistoryPoint instance. */
+    constructor($$source: Partial<HistoryPoint> = {}) {
+        if (!("ts" in $$source)) {
+            this["ts"] = 0;
+        }
+        if (!("cpu" in $$source)) {
+            this["cpu"] = 0;
+        }
+        if (!("cpuPeak" in $$source)) {
+            this["cpuPeak"] = 0;
+        }
+        if (!("memMB" in $$source)) {
+            this["memMB"] = 0;
+        }
+        if (!("commitMB" in $$source)) {
+            this["commitMB"] = 0;
+        }
+        if (!("memTotalMB" in $$source)) {
+            this["memTotalMB"] = 0;
+        }
+        if (!("tcp" in $$source)) {
+            this["tcp"] = 0;
+        }
+        if (!("udp" in $$source)) {
+            this["udp"] = 0;
+        }
+        if (!("hasData" in $$source)) {
+            this["hasData"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HistoryPoint instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HistoryPoint {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new HistoryPoint($$parsedSource as Partial<HistoryPoint>);
+    }
+}
+
+/**
+ * HistorySeries 是一次历史查询结果。
+ */
+export class HistorySeries {
+    "rangeHours": number;
+    "points": HistoryPoint[];
+
+    /** Creates a new HistorySeries instance. */
+    constructor($$source: Partial<HistorySeries> = {}) {
+        if (!("rangeHours" in $$source)) {
+            this["rangeHours"] = 0;
+        }
+        if (!("points" in $$source)) {
+            this["points"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HistorySeries instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HistorySeries {
+        const $$createField1_0 = $$createType8;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("points" in $$parsedSource) {
+            $$parsedSource["points"] = $$createField1_0($$parsedSource["points"]);
+        }
+        return new HistorySeries($$parsedSource as Partial<HistorySeries>);
+    }
+}
+
 export class KillProcessResult {
     "pid": number;
     "message": string;
@@ -543,7 +638,7 @@ export class PortListResult {
      * Creates a new PortListResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PortListResult {
-        const $$createField0_0 = $$createType8;
+        const $$createField0_0 = $$createType10;
         const $$createField5_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ports" in $$parsedSource) {
@@ -911,5 +1006,7 @@ const $$createType3 = $Create.Nullable($$createType2);
 const $$createType4 = FileLockEntry.createFrom;
 const $$createType5 = $Create.Array($$createType4);
 const $$createType6 = $Create.Array($Create.Any);
-const $$createType7 = PortEntry.createFrom;
+const $$createType7 = HistoryPoint.createFrom;
 const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = PortEntry.createFrom;
+const $$createType10 = $Create.Array($$createType9);

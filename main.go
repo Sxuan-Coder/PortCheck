@@ -43,6 +43,7 @@ func main() {
 			application.NewService(&ServicesService{}),
 			application.NewService(&StartupService{}),
 			application.NewService(&FileLockService{}),
+			application.NewService(&HistoryService{}),
 			application.NewService(&CodingPlanService{}),
 			application.NewService(&UpdateService{}),
 			application.NewService(&SettingsService{}),

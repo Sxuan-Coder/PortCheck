@@ -171,6 +171,17 @@ func (s *MonitorService) emitTick(now time.Time) {
 	if app := application.Get(); app != nil {
 		app.Event.EmitEvent(&application.CustomEvent{Name: monitorTickEvent, Data: payload})
 	}
+
+	// 历史记录：只向带缓冲 channel 投递，磁盘 I/O 在独立 writer goroutine。
+	historyAdd(historySample{
+		ts:         now,
+		cpu:        perf.CPUPercent,
+		memGB:      perf.MemUsedGB,
+		commitGB:   perf.CommitUsedGB,
+		memTotalGB: perf.MemTotalGB,
+		tcp:        uint32(portStats.TCPCount),
+		udp:        uint32(portStats.UDPCount),
+	})
 }
 
 // SetInterval 动态调整前台采样间隔（毫秒），范围 200-10000；超范围自动钳位。
