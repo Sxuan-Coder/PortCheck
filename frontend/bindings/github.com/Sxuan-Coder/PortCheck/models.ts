@@ -6,6 +6,78 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * CloseConnRequest 描述要断开的一条 IPv4 TCP 连接。
+ * PID 参与行匹配：防止四元组在确认/提权等待期间被其他进程复用后关错连接。
+ */
+export class CloseConnRequest {
+    /**
+     * 仅支持 "v4"
+     */
+    "ipVersion": string;
+    "localAddr": string;
+    "localPort": number;
+    "remoteAddr": string;
+    "remotePort": number;
+    "pid": number;
+
+    /** Creates a new CloseConnRequest instance. */
+    constructor($$source: Partial<CloseConnRequest> = {}) {
+        if (!("ipVersion" in $$source)) {
+            this["ipVersion"] = "";
+        }
+        if (!("localAddr" in $$source)) {
+            this["localAddr"] = "";
+        }
+        if (!("localPort" in $$source)) {
+            this["localPort"] = 0;
+        }
+        if (!("remoteAddr" in $$source)) {
+            this["remoteAddr"] = "";
+        }
+        if (!("remotePort" in $$source)) {
+            this["remotePort"] = 0;
+        }
+        if (!("pid" in $$source)) {
+            this["pid"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CloseConnRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CloseConnRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CloseConnRequest($$parsedSource as Partial<CloseConnRequest>);
+    }
+}
+
+/**
+ * CloseConnResult 是断开连接操作的结果。
+ */
+export class CloseConnResult {
+    "message": string;
+
+    /** Creates a new CloseConnResult instance. */
+    constructor($$source: Partial<CloseConnResult> = {}) {
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CloseConnResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CloseConnResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CloseConnResult($$parsedSource as Partial<CloseConnResult>);
+    }
+}
+
+/**
  * CodingPlanAccount 描述一条 Coding Plan 用量监控账号的配置。
  */
 export class CodingPlanAccount {
@@ -284,6 +356,11 @@ export class KillProcessResult {
 
 export class PortEntry {
     "protocol": string;
+
+    /**
+     * "v4" / "v6"，供前端判断可断开范围
+     */
+    "ipVersion": string;
     "localAddr": string;
     "localPort": number;
     "remoteAddr": string;
@@ -297,6 +374,9 @@ export class PortEntry {
     constructor($$source: Partial<PortEntry> = {}) {
         if (!("protocol" in $$source)) {
             this["protocol"] = "";
+        }
+        if (!("ipVersion" in $$source)) {
+            this["ipVersion"] = "";
         }
         if (!("localAddr" in $$source)) {
             this["localAddr"] = "";

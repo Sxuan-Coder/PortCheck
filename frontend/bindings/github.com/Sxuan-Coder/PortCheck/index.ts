@@ -21,6 +21,8 @@ export {
 };
 
 export {
+    CloseConnRequest,
+    CloseConnResult,
     CodingPlanAccount,
     CodingPlanBalance,
     CodingPlanQuota,

@@ -9,18 +9,30 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+/**
+ * CloseConnection 断开一条 IPv4 TCP 连接，不结束进程。
+ * 先直接尝试 SetTcpEntry；权限不足（错误码 5/317）时走提权协议重试，
+ * 取消 UAC 等同未操作，不改变界面状态。
+ */
+export function CloseConnection(req: $models.CloseConnRequest): $CancellablePromise<$models.CloseConnResult> {
+    return $Call.ByID(3654114806, req).then(($result: any) => {
+        return $$createType0($result);
+    });
+}
+
 export function KillProcess(pid: number): $CancellablePromise<$models.KillProcessResult> {
     return $Call.ByID(1369868295, pid).then(($result: any) => {
-        return $$createType0($result);
+        return $$createType1($result);
     });
 }
 
 export function ListPorts(): $CancellablePromise<$models.PortListResult> {
     return $Call.ByID(2476916090).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType2($result);
     });
 }
 
 // Private type creation functions
-const $$createType0 = $models.KillProcessResult.createFrom;
-const $$createType1 = $models.PortListResult.createFrom;
+const $$createType0 = $models.CloseConnResult.createFrom;
+const $$createType1 = $models.KillProcessResult.createFrom;
+const $$createType2 = $models.PortListResult.createFrom;

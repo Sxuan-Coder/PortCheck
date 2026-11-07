@@ -36,6 +36,7 @@ type PortService struct{}
 
 type PortEntry struct {
 	Protocol   string `json:"protocol"`
+	IPVersion  string `json:"ipVersion"` // "v4" / "v6"，供前端判断可断开范围
 	LocalAddr  string `json:"localAddr"`
 	LocalPort  int    `json:"localPort"`
 	RemoteAddr string `json:"remoteAddr"`
@@ -240,6 +241,7 @@ func listTCP4Ports() ([]PortEntry, error) {
 		info := cachedProcessInfo(processCache, row.OwningPID)
 		ports = append(ports, PortEntry{
 			Protocol:   "TCP",
+			IPVersion:  "v4",
 			LocalAddr:  ipv4FromDWORD(row.LocalAddr),
 			LocalPort:  portFromDWORD(row.LocalPort),
 			RemoteAddr: ipv4FromDWORD(row.RemoteAddr),
@@ -271,6 +273,7 @@ func listTCP6Ports() ([]PortEntry, error) {
 		info := cachedProcessInfo(processCache, row.OwningPID)
 		ports = append(ports, PortEntry{
 			Protocol:   "TCP",
+			IPVersion:  "v6",
 			LocalAddr:  ipv6FromBytes(row.LocalAddr),
 			LocalPort:  portFromDWORD(row.LocalPort),
 			RemoteAddr: ipv6FromBytes(row.RemoteAddr),
@@ -316,10 +319,11 @@ func listUDP4Ports() ([]PortEntry, error) {
 	for i := uint32(0); i < count; i++ {
 		offset := uintptr(4) + uintptr(i)*rowSize
 		row := (*mibUDPRowOwnerPID)(unsafe.Pointer(&buf[offset]))
-		info := cachedProcessInfo(processCache, row.OwningPID)
-		ports = append(ports, PortEntry{
-			Protocol:  "UDP",
-			LocalAddr: ipv4FromDWORD(row.LocalAddr),
+			info := cachedProcessInfo(processCache, row.OwningPID)
+			ports = append(ports, PortEntry{
+				Protocol:  "UDP",
+				IPVersion: "v4",
+				LocalAddr: ipv4FromDWORD(row.LocalAddr),
 			LocalPort: portFromDWORD(row.LocalPort),
 			State:     "-",
 			PID:       row.OwningPID,
@@ -345,10 +349,11 @@ func listUDP6Ports() ([]PortEntry, error) {
 	for i := uint32(0); i < count; i++ {
 		offset := uintptr(4) + uintptr(i)*rowSize
 		row := (*mibUDP6RowOwnerPID)(unsafe.Pointer(&buf[offset]))
-		info := cachedProcessInfo(processCache, row.OwningPID)
-		ports = append(ports, PortEntry{
-			Protocol:  "UDP",
-			LocalAddr: ipv6FromBytes(row.LocalAddr),
+			info := cachedProcessInfo(processCache, row.OwningPID)
+			ports = append(ports, PortEntry{
+				Protocol:  "UDP",
+				IPVersion: "v6",
+				LocalAddr: ipv6FromBytes(row.LocalAddr),
 			LocalPort: portFromDWORD(row.LocalPort),
 			State:     "-",
 			PID:       row.OwningPID,

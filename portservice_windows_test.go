@@ -246,3 +246,40 @@ func waitForTCPPortPID(port int, pid uint32, timeout time.Duration) bool {
 	}
 	return false
 }
+
+func TestIPv4AndPortEncodingRoundTrip(t *testing.T) {
+	for _, addr := range []string{"127.0.0.1", "192.168.1.5", "0.0.0.0", "255.255.255.255"} {
+		enc, err := ipv4ToDWORD(addr)
+		if err != nil {
+			t.Fatalf("ipv4ToDWORD(%q): %v", addr, err)
+		}
+		if got := ipv4FromDWORD(enc); got != addr {
+			t.Fatalf("round trip %q -> %q", addr, got)
+		}
+	}
+	if _, err := ipv4ToDWORD("::1"); err == nil {
+		t.Fatal("IPv6 地址应被拒绝")
+	}
+	for _, port := range []int{0, 80, 443, 8080, 65535} {
+		if got := portFromDWORD(portToDWORD(port)); got != port {
+			t.Fatalf("port round trip %d -> %d", port, got)
+		}
+	}
+}
+
+func TestCloseConnPackUnpack(t *testing.T) {
+	req := CloseConnRequest{
+		IPVersion: "v4", LocalAddr: "192.168.1.5", LocalPort: 52341,
+		RemoteAddr: "93.184.216.34", RemotePort: 443, PID: 4242,
+	}
+	back, err := unpackCloseConnRequest(packCloseConnRequest(req))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back != req {
+		t.Fatalf("round trip mismatch: %+v vs %+v", back, req)
+	}
+	if _, err := unpackCloseConnRequest("bad-format"); err == nil {
+		t.Fatal("非法格式应报错")
+	}
+}

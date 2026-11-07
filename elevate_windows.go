@@ -353,6 +353,9 @@ func runElevatedHelper(args []string) {
 	case "startup-enable":
 		opErr = enableStartupDirect(name, location)
 		result.Message = fmt.Sprintf("已启用启动项：%s", name)
+	case "tcp-close":
+		opErr = closeTCPDirect(name)
+		result.Message = "已请求断开该连接"
 	case "ping":
 		// 协议探针：不执行任何写操作。
 		result.Message = "pong"

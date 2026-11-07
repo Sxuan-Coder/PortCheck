@@ -8,6 +8,7 @@ type PortService struct{}
 
 type PortEntry struct {
 	Protocol   string `json:"protocol"`
+	IPVersion  string `json:"ipVersion"`
 	LocalAddr  string `json:"localAddr"`
 	LocalPort  int    `json:"localPort"`
 	RemoteAddr string `json:"remoteAddr"`
@@ -38,4 +39,22 @@ func (s *PortService) ListPorts() (PortListResult, error) {
 
 func (s *PortService) KillProcess(pid uint32) (KillProcessResult, error) {
 	return KillProcessResult{PID: pid}, errors.New("PortCheck MVP 目前只支持 Windows")
+}
+
+// CloseConnRequest / CloseConnResult 与 Windows 侧保持结构一致。
+type CloseConnRequest struct {
+	IPVersion  string `json:"ipVersion"`
+	LocalAddr  string `json:"localAddr"`
+	LocalPort  int    `json:"localPort"`
+	RemoteAddr string `json:"remoteAddr"`
+	RemotePort int    `json:"remotePort"`
+	PID        uint32 `json:"pid"`
+}
+
+type CloseConnResult struct {
+	Message string `json:"message"`
+}
+
+func (s *PortService) CloseConnection(req CloseConnRequest) (CloseConnResult, error) {
+	return CloseConnResult{}, errors.New("PortCheck MVP 目前只支持 Windows")
 }
