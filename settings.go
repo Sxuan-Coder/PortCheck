@@ -179,7 +179,8 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	return settings, nil
 }
 
-// SaveSettings 持久化设置到 JSON 文件。
+// SaveSettings 持久化设置到 JSON 文件，并同步采样间隔的内存缓存
+// （避免采样循环每 tick 读磁盘），前台间隔变更下一个 tick 生效。
 func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.ProcessScope = normalizeProcessScope(settings.ProcessScope)
 	settings.OverlayPosition = normalizeOverlayPosition(settings.OverlayPosition)
@@ -195,7 +196,11 @@ func (s *SettingsService) SaveSettings(settings Settings) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return err
+	}
+	monitorSvc.SetForegroundIntervalMs(settings.RefreshIntervalMs)
+	return nil
 }
 
 // IsElevated 返回当前进程是否以管理员权限运行（进程范围=system 的运行时前提）。

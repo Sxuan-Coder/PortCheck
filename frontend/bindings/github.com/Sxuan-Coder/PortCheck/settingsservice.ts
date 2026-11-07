@@ -39,7 +39,8 @@ export function RelaunchElevated(): $CancellablePromise<void> {
 }
 
 /**
- * SaveSettings 持久化设置到 JSON 文件。
+ * SaveSettings 持久化设置到 JSON 文件，并同步采样间隔的内存缓存
+ * （避免采样循环每 tick 读磁盘），前台间隔变更下一个 tick 生效。
  */
 export function SaveSettings(settings: $models.Settings): $CancellablePromise<void> {
     return $Call.ByID(2662658340, settings);

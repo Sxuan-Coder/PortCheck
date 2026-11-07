@@ -208,6 +208,14 @@ func (s *OverlayService) ApplyUsage(enabled bool, position string) error {
 	return nil
 }
 
+// AnyOverlayActive 报告任一悬浮窗当前是否处于开启状态（加锁读取）。
+// 采样节奏决策用它判断"是否始终存在观察者"：悬浮窗开着时即使主窗口隐藏也保持前台间隔。
+func (s *OverlayService) AnyOverlayActive() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.enabled || s.usageEnabled
+}
+
 // SetUsageRows 由用量悬浮窗前端上报需要展示的账号行数，后端据此调整窗口高度。
 // 账号增删时行数变化，窗口高度跟随；行数在 [minRows, maxRows] 内收敛。
 func (s *OverlayService) SetUsageRows(rows int) error {

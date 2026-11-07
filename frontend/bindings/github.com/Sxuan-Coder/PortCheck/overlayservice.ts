@@ -13,6 +13,14 @@
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AnyOverlayActive 报告任一悬浮窗当前是否处于开启状态（加锁读取）。
+ * 采样节奏决策用它判断"是否始终存在观察者"：悬浮窗开着时即使主窗口隐藏也保持前台间隔。
+ */
+export function AnyOverlayActive(): $CancellablePromise<boolean> {
+    return $Call.ByID(2979416597);
+}
+
+/**
  * Apply 是前端可调用的 RPC：按 (enabled, position) 创建 / 移动 / 关闭悬浮窗。
  *   - enabled=false：关闭并丢弃窗口引用。
  *   - enabled=true 且窗口不存在：按 position 计算坐标后创建置顶无边框窗口。

@@ -39,7 +39,7 @@ func main() {
 		Description: "Windows local task manager & port watcher built with Wails",
 		Services: []application.Service{
 			application.NewService(&PortService{}),
-			application.NewService(&MonitorService{}),
+			application.NewService(monitorSvc),
 			application.NewService(&ServicesService{}),
 			application.NewService(&StartupService{}),
 			application.NewService(&CodingPlanService{}),

@@ -235,7 +235,7 @@ async function onOverlayFontSizeChange(e: Event) {
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-label">进程刷新间隔</span>
-            <span class="setting-desc">影响进程列表、CPU 曲线的更新频率</span>
+            <span class="setting-desc">影响进程列表、CPU 曲线的更新频率；最小化或隐藏到托盘时自动降为 5s 省电</span>
           </div>
           <select
             class="setting-select"
