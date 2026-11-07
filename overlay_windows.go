@@ -2,17 +2,16 @@ package main
 
 import (
 	"syscall"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
-	user32DLL          = syscall.NewLazyDLL("user32.dll")
-	procGetWindowLong  = user32DLL.NewProc("GetWindowLongPtrW")
-	procSetWindowLong  = user32DLL.NewProc("SetWindowLongPtrW")
-	procSetWindowPos   = user32DLL.NewProc("SetWindowPos")
-	procInvalidateRect = user32DLL.NewProc("InvalidateRect")
-	procUpdateWindow   = user32DLL.NewProc("UpdateWindow")
+	user32DLL         = syscall.NewLazyDLL("user32.dll")
+	procGetWindowLong = user32DLL.NewProc("GetWindowLongPtrW")
+	procSetWindowLong = user32DLL.NewProc("SetWindowLongPtrW")
+	procSetWindowPos  = user32DLL.NewProc("SetWindowPos")
 )
 
 // fixOverlayExStyle 修正悬浮窗的扩展窗口样式。
@@ -47,20 +46,23 @@ func fixOverlayExStyle(win application.Window) {
 		uintptr(swpNoSize|swpNoMove|swpNoZOrder|swpFrameChanged))
 }
 
-// invalidateMainWindow 强制主窗口整区重绘。悬浮窗（透明置顶分层窗口）创建或销毁
-// 会扰动 DWM 合成，主窗口 WebView2 暴露出的旧帧区域可能收不到 invalidation，
-// 在设置页等内容区留下错位残影（表现为元素被渲染两次、轻微错位）。
-// 这里对主窗口客户区整体 InvalidateRect + UpdateWindow，主动清掉脏像素。
-// 非主线程安全面 OK：InvalidateRect/UpdateWindow 仅投递绘制消息，Wails 事件循环
-// 会处理；主窗口未创建（mainWindow == nil）时静默跳过。
-func invalidateMainWindow() {
+// resetMainWindowScroll 复位主窗口根视口的滚动偏移。
+// 实测根因（CDP 诊断复现）：悬浮窗创建/销毁瞬间，主窗口 WebView2 controller bounds
+// 被瞬时置为悬浮窗的小尺寸，浏览器为让刚聚焦的设置项保持可见而滚动根视口；bounds
+// 恢复后该偏移卡死——内容整体上移、窗口下方留黑、标题栏拖拽命中错位（可拖区随内容
+// 一起上移）。此状态下 scrollTop/scrollTo 均读为 0 / 无效（overflow:hidden 视口），
+// 唯一验证有效的复位是 scrollIntoView 把根滚回顶部。
+// 立即执行一次 + 150ms 后补一次：偏移可能发生在 Apply 返回之后。
+// 非 Windows 平台无此问题（见 overlay_other.go 占位）。
+func resetMainWindowScroll() {
 	if mainWindow == nil {
 		return
 	}
-	hwnd := uintptr(mainWindow.NativeWindow())
-	if hwnd == 0 {
-		return
-	}
-	procInvalidateRect.Call(hwnd, 0, 1) // NULL 区域 + ERASE 背景：整区失效
-	procUpdateWindow.Call(hwnd)
+	const js = `(function(){var t=document.querySelector('.titlebar');(t||document.body).scrollIntoView();})()`
+	mainWindow.ExecJS(js)
+	time.AfterFunc(150*time.Millisecond, func() {
+		if mainWindow != nil {
+			mainWindow.ExecJS(js)
+		}
+	})
 }

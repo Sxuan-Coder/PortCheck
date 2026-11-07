@@ -111,7 +111,7 @@ func (s *OverlayService) Apply(enabled bool, position string) error {
 			ux, uy := s.computeUsageXY(s.usagePosition)
 			s.usageWin.SetPosition(ux, uy)
 		}
-		invalidateMainWindow()
+		resetMainWindowScroll()
 		return nil
 	}
 
@@ -138,7 +138,7 @@ func (s *OverlayService) Apply(enabled bool, position string) error {
 			fixOverlayExStyle(s.win)
 			// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
 			s.win.SetPosition(x, y)
-			invalidateMainWindow()
+			resetMainWindowScroll()
 			return nil
 	}
 
@@ -172,7 +172,7 @@ func (s *OverlayService) ApplyUsage(enabled bool, position string) error {
 			s.usageWin.Close()
 			s.usageWin = nil
 		}
-		invalidateMainWindow()
+		resetMainWindowScroll()
 		return nil
 	}
 
@@ -199,7 +199,7 @@ func (s *OverlayService) ApplyUsage(enabled bool, position string) error {
 			fixOverlayExStyle(s.usageWin)
 			// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
 			s.usageWin.SetPosition(x, y)
-			invalidateMainWindow()
+			resetMainWindowScroll()
 			return nil
 	}
 
