@@ -139,7 +139,7 @@ function singleColor(cpu: number) {
     </div>
 
     <div class="table">
-      <div class="thead">
+      <div ref="bodyEl" class="tbody scroll" @scroll.passive="onScroll">
         <div class="row head">
           <div class="c-name">名称</div>
           <div class="c-pid">PID</div>
@@ -147,10 +147,9 @@ function singleColor(cpu: number) {
           <div class="c-cpu2">CPU 单核</div>
           <div class="c-mem">内存</div>
           <div class="c-commit">提交内存</div>
+          <div class="c-io">I/O</div>
           <div class="c-act">操作</div>
         </div>
-      </div>
-      <div ref="bodyEl" class="tbody scroll" @scroll.passive="onScroll">
         <div :style="{ height: totalHeight + 'px', position: 'relative' }">
           <div :style="{ height: padTop + 'px' }" />
           <div
@@ -174,6 +173,9 @@ function singleColor(cpu: number) {
             </div>
             <div class="c-mem mono">{{ formatBytes(p.memBytes) }}</div>
             <div class="c-commit mono">{{ formatBytes(p.commitBytes) }}</div>
+            <div class="c-io mono" title="读+写传输速率（含磁盘/网络）">
+              {{ p.ioBps && p.ioBps > 0 ? formatBytes(p.ioBps) + '/s' : '—' }}
+            </div>
             <div class="c-act">
               <button
                 v-if="!isProtected(p.pid)"
@@ -286,10 +288,13 @@ function singleColor(cpu: number) {
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 70px 84px 84px 104px 96px 80px;
+  grid-template-columns: 1fr 70px 84px 84px 104px 96px 96px 80px;
   align-items: center;
 }
 .row.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 8px 12px;
   background: var(--header-bg);
   border-bottom: 1px solid var(--hairline);
@@ -302,6 +307,7 @@ function singleColor(cpu: number) {
 .c-cpu2,
 .c-mem,
 .c-commit,
+.c-io,
 .c-act {
   text-align: right;
   padding-right: 4px;

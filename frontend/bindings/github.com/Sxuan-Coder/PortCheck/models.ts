@@ -6,6 +6,78 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * CloseConnRequest 描述要断开的一条 IPv4 TCP 连接。
+ * PID 参与行匹配：防止四元组在确认/提权等待期间被其他进程复用后关错连接。
+ */
+export class CloseConnRequest {
+    /**
+     * 仅支持 "v4"
+     */
+    "ipVersion": string;
+    "localAddr": string;
+    "localPort": number;
+    "remoteAddr": string;
+    "remotePort": number;
+    "pid": number;
+
+    /** Creates a new CloseConnRequest instance. */
+    constructor($$source: Partial<CloseConnRequest> = {}) {
+        if (!("ipVersion" in $$source)) {
+            this["ipVersion"] = "";
+        }
+        if (!("localAddr" in $$source)) {
+            this["localAddr"] = "";
+        }
+        if (!("localPort" in $$source)) {
+            this["localPort"] = 0;
+        }
+        if (!("remoteAddr" in $$source)) {
+            this["remoteAddr"] = "";
+        }
+        if (!("remotePort" in $$source)) {
+            this["remotePort"] = 0;
+        }
+        if (!("pid" in $$source)) {
+            this["pid"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CloseConnRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CloseConnRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CloseConnRequest($$parsedSource as Partial<CloseConnRequest>);
+    }
+}
+
+/**
+ * CloseConnResult 是断开连接操作的结果。
+ */
+export class CloseConnResult {
+    "message": string;
+
+    /** Creates a new CloseConnResult instance. */
+    constructor($$source: Partial<CloseConnResult> = {}) {
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CloseConnResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CloseConnResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CloseConnResult($$parsedSource as Partial<CloseConnResult>);
+    }
+}
+
+/**
  * CodingPlanAccount 描述一条 Coding Plan 用量监控账号的配置。
  */
 export class CodingPlanAccount {
@@ -257,6 +329,193 @@ export class CodingPlanUsage {
     }
 }
 
+/**
+ * FileLockEntry 描述一个占用文件的进程。
+ */
+export class FileLockEntry {
+    "pid": number;
+    "process": string;
+    "exePath": string;
+    "appType": string;
+
+    /**
+     * 进程创建时间，Unix 毫秒；0 表示未知
+     */
+    "startTime": number;
+
+    /** Creates a new FileLockEntry instance. */
+    constructor($$source: Partial<FileLockEntry> = {}) {
+        if (!("pid" in $$source)) {
+            this["pid"] = 0;
+        }
+        if (!("process" in $$source)) {
+            this["process"] = "";
+        }
+        if (!("exePath" in $$source)) {
+            this["exePath"] = "";
+        }
+        if (!("appType" in $$source)) {
+            this["appType"] = "";
+        }
+        if (!("startTime" in $$source)) {
+            this["startTime"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FileLockEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FileLockEntry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FileLockEntry($$parsedSource as Partial<FileLockEntry>);
+    }
+}
+
+/**
+ * FileLockResult 是文件占用查询结果。
+ */
+export class FileLockResult {
+    "entries": FileLockEntry[];
+
+    /**
+     * 实际参与查询的文件数
+     */
+    "scanned": number;
+
+    /**
+     * 被隔离的问题文件等提示
+     */
+    "warnings": string[];
+
+    /** Creates a new FileLockResult instance. */
+    constructor($$source: Partial<FileLockResult> = {}) {
+        if (!("entries" in $$source)) {
+            this["entries"] = [];
+        }
+        if (!("scanned" in $$source)) {
+            this["scanned"] = 0;
+        }
+        if (!("warnings" in $$source)) {
+            this["warnings"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FileLockResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FileLockResult {
+        const $$createField0_0 = $$createType5;
+        const $$createField2_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("entries" in $$parsedSource) {
+            $$parsedSource["entries"] = $$createField0_0($$parsedSource["entries"]);
+        }
+        if ("warnings" in $$parsedSource) {
+            $$parsedSource["warnings"] = $$createField2_0($$parsedSource["warnings"]);
+        }
+        return new FileLockResult($$parsedSource as Partial<FileLockResult>);
+    }
+}
+
+/**
+ * HistoryPoint 是分桶后的一个数据点；HasData=false 表示该桶无采样（断档）。
+ */
+export class HistoryPoint {
+    /**
+     * Unix 毫秒
+     */
+    "ts": number;
+
+    /**
+     * 均值百分比 0-100
+     */
+    "cpu": number;
+    "cpuPeak": number;
+    "memMB": number;
+    "commitMB": number;
+    "memTotalMB": number;
+    "tcp": number;
+    "udp": number;
+    "hasData": boolean;
+
+    /** Creates a new HistoryPoint instance. */
+    constructor($$source: Partial<HistoryPoint> = {}) {
+        if (!("ts" in $$source)) {
+            this["ts"] = 0;
+        }
+        if (!("cpu" in $$source)) {
+            this["cpu"] = 0;
+        }
+        if (!("cpuPeak" in $$source)) {
+            this["cpuPeak"] = 0;
+        }
+        if (!("memMB" in $$source)) {
+            this["memMB"] = 0;
+        }
+        if (!("commitMB" in $$source)) {
+            this["commitMB"] = 0;
+        }
+        if (!("memTotalMB" in $$source)) {
+            this["memTotalMB"] = 0;
+        }
+        if (!("tcp" in $$source)) {
+            this["tcp"] = 0;
+        }
+        if (!("udp" in $$source)) {
+            this["udp"] = 0;
+        }
+        if (!("hasData" in $$source)) {
+            this["hasData"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HistoryPoint instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HistoryPoint {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new HistoryPoint($$parsedSource as Partial<HistoryPoint>);
+    }
+}
+
+/**
+ * HistorySeries 是一次历史查询结果。
+ */
+export class HistorySeries {
+    "rangeHours": number;
+    "points": HistoryPoint[];
+
+    /** Creates a new HistorySeries instance. */
+    constructor($$source: Partial<HistorySeries> = {}) {
+        if (!("rangeHours" in $$source)) {
+            this["rangeHours"] = 0;
+        }
+        if (!("points" in $$source)) {
+            this["points"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HistorySeries instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HistorySeries {
+        const $$createField1_0 = $$createType8;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("points" in $$parsedSource) {
+            $$parsedSource["points"] = $$createField1_0($$parsedSource["points"]);
+        }
+        return new HistorySeries($$parsedSource as Partial<HistorySeries>);
+    }
+}
+
 export class KillProcessResult {
     "pid": number;
     "message": string;
@@ -284,6 +543,11 @@ export class KillProcessResult {
 
 export class PortEntry {
     "protocol": string;
+
+    /**
+     * "v4" / "v6"，供前端判断可断开范围
+     */
+    "ipVersion": string;
     "localAddr": string;
     "localPort": number;
     "remoteAddr": string;
@@ -297,6 +561,9 @@ export class PortEntry {
     constructor($$source: Partial<PortEntry> = {}) {
         if (!("protocol" in $$source)) {
             this["protocol"] = "";
+        }
+        if (!("ipVersion" in $$source)) {
+            this["ipVersion"] = "";
         }
         if (!("localAddr" in $$source)) {
             this["localAddr"] = "";
@@ -371,7 +638,7 @@ export class PortListResult {
      * Creates a new PortListResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PortListResult {
-        const $$createField0_0 = $$createType5;
+        const $$createField0_0 = $$createType10;
         const $$createField5_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ports" in $$parsedSource) {
@@ -736,6 +1003,10 @@ const $$createType0 = CodingPlanQuota.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = CodingPlanBalance.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = PortEntry.createFrom;
+const $$createType4 = FileLockEntry.createFrom;
 const $$createType5 = $Create.Array($$createType4);
 const $$createType6 = $Create.Array($Create.Any);
+const $$createType7 = HistoryPoint.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = PortEntry.createFrom;
+const $$createType10 = $Create.Array($$createType9);

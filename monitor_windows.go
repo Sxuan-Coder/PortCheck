@@ -16,6 +16,7 @@ var (
 	procGlobalMemoryStatusEx    = kernel32.NewProc("GlobalMemoryStatusEx")
 	procGetProcessMemoryInfo    = psapi.NewProc("GetProcessMemoryInfo")
 	procGetActiveProcessorCount = kernel32.NewProc("GetActiveProcessorCount")
+	procGetProcessIoCounters    = kernel32.NewProc("GetProcessIoCounters")
 )
 
 // allProcessorGroups 用于 GetActiveProcessorCount 取全部逻辑核心。
@@ -99,11 +100,13 @@ func sampleProcessesAndPerf(s *MonitorService, elapsed float64) ([]ProcessInfo, 
 	}
 
 	seen := make(map[uint32]int64, len(s.prevProcTimes))
+	seenIo := make(map[uint32]uint64, len(s.prevIoTimes))
 	infoCache := make(map[uint32]processInfo, 256)
 	for {
 		pid := entry.ProcessID
-		if cpu, mem, commit, ok := queryProcessLoad(pid); ok {
+		if cpu, mem, commit, io, ok := queryProcessLoad(pid); ok {
 			seen[pid] = cpu
+			seenIo[pid] = io
 			prev := s.prevProcTimes[pid]
 			info := cachedProcessInfo(infoCache, pid)
 			out = append(out, ProcessInfo{
@@ -113,6 +116,7 @@ func sampleProcessesAndPerf(s *MonitorService, elapsed float64) ([]ProcessInfo, 
 				CPU:         cpuPercent(cpu, prev, elapsed),
 				MemBytes:    mem,
 				CommitBytes: commit,
+				IoBps:       ioRate(io, s.prevIoTimes[pid], elapsed),
 				IconDataURL: iconDataURLForEmit(info.path),
 			})
 		}
@@ -121,6 +125,7 @@ func sampleProcessesAndPerf(s *MonitorService, elapsed float64) ([]ProcessInfo, 
 		}
 	}
 	s.prevProcTimes = seen
+	s.prevIoTimes = seenIo
 
 	return out, samplePerfOnly(s)
 }
@@ -163,30 +168,62 @@ func samplePerfOnly(s *MonitorService) PerfSnapshot {
 	return perf
 }
 
-// queryProcessLoad 返回进程累计 CPU 时间（user+kernel，100ns 刻度）、工作集与提交内存字节，失败时 ok=false。
+// queryProcessLoad 返回进程累计 CPU 时间（user+kernel，100ns 刻度）、工作集、提交内存字节
+// 与累计 I/O 传输字节（读+写，含磁盘/网络/设备），失败时 ok=false。
 // 提交内存取 PROCESS_MEMORY_COUNTERS.pagefileUsage（对应任务管理器"提交大小"列）。
-func queryProcessLoad(pid uint32) (cpu int64, mem uint64, commit uint64, ok bool) {
+func queryProcessLoad(pid uint32) (cpu int64, mem uint64, commit uint64, io uint64, ok bool) {
 	if pid == 0 {
-		return 0, 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
-		return 0, 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	defer windows.CloseHandle(handle)
 
 	var creation, exit, kernel, user windows.Filetime
 	if err := windows.GetProcessTimes(handle, &creation, &exit, &kernel, &user); err != nil {
-		return 0, 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	cpu = filetimeTo100ns(kernel) + filetimeTo100ns(user)
 
 	var counters processMemoryCounters
 	counters.cb = uint32(unsafe.Sizeof(counters))
 	if r, _, _ := procGetProcessMemoryInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&counters)), uintptr(counters.cb)); r == 0 {
-		return cpu, 0, 0, true
+		return cpu, 0, 0, 0, true
 	}
-	return cpu, uint64(counters.workingSetSize), uint64(counters.pagefileUsage), true
+	io = queryProcessIOBytes(handle)
+	return cpu, uint64(counters.workingSetSize), uint64(counters.pagefileUsage), io, true
+}
+
+// ioCounters 对应 Win32 IO_COUNTERS（x64 下 48 字节），只取读+写传输字节。
+type ioCounters struct {
+	readTransfer  uint64
+	writeTransfer uint64
+	otherTransfer uint64
+	readOps       uint64
+	writeOps      uint64
+	otherOps      uint64
+}
+
+// queryProcessIOBytes 读取进程累计读+写传输字节；x/sys/windows 无包装，走 kernel32。
+// 首次打开的进程句柄权限为 QUERY_LIMITED，GetProcessIoCounters 对其可用。
+func queryProcessIOBytes(handle windows.Handle) uint64 {
+	var counters ioCounters
+	if r, _, _ := procGetProcessIoCounters.Call(uintptr(handle), uintptr(unsafe.Pointer(&counters))); r == 0 {
+		return 0
+	}
+	return counters.readTransfer + counters.writeTransfer
+}
+
+// ioRate 把两次采样的累计 I/O 字节差值换算为每秒字节数。
+// 守卫与 cpuPercent 一致：首次见到（prev=0）或计数器回退（PID 复用）时返回 0，
+// 防止把进程自启动以来的累计 I/O 当成单 tick 增量出现假峰值。
+func ioRate(cur, prev uint64, elapsed float64) float64 {
+	if elapsed <= 0 || prev == 0 || cur < prev {
+		return 0
+	}
+	return float64(cur-prev) / elapsed
 }
 
 // processNameByPID 复用端口服务中已实现的最小进程信息查询，避免逻辑重复。

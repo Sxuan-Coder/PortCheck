@@ -96,6 +96,12 @@ defineProps<{ name: string; size?: number }>()
       <path d="M12 15l4-4" />
       <circle cx="12" cy="15" r="1" />
     </template>
+    <template v-else-if="name === 'filelock'">
+      <path d="M6 2h9l5 5v15H6z" />
+      <path d="M15 2v5h5" />
+      <rect x="10" y="13" width="7" height="5" rx="1" />
+      <path d="M11.5 13v-1.5a1.5 1.5 0 0 1 3 0V13" />
+    </template>
     <template v-else-if="name === 'plus'">
       <path d="M12 5v14M5 12h14" />
     </template>

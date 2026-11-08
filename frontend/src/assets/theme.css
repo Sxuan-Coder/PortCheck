@@ -131,6 +131,11 @@ body.light-theme select option {
 }
 
 /* ============ 滚动条 ============ */
+/* 稳定滚动条槽位：滚动条出现/消失不改变内容宽度，消除表格列的横向抖动；
+   表头与表体在同一滚动容器内（sticky 表头），列宽天然对齐。 */
+.scroll {
+  scrollbar-gutter: stable;
+}
 .scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;

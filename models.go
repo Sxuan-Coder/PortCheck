@@ -8,6 +8,7 @@ type ProcessInfo struct {
 	CPU         float64 `json:"cpu"`         // 单核基准百分比（原始值，可 >100%）；前端 ÷ 核心数 得整机基准
 	MemBytes    uint64  `json:"memBytes"`    // 工作集 (WorkingSetSize)，单位字节
 	CommitBytes uint64  `json:"commitBytes"` // 提交内存 (PagefileUsage)，对应任务管理器"提交大小"，单位字节
+	IoBps       float64 `json:"ioBps"`       // I/O 速率：读+写传输字节/秒（含磁盘/网络/设备，差值法），首次见到为 0
 	IconDataURL string  `json:"iconDataUrl"` // 应用图标 data URL；进程流中每路径通常只推送一次，前端需缓存
 }
 

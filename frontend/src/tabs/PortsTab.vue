@@ -122,6 +122,37 @@ async function kill(p: PortRow) {
   }
 }
 
+// 仅 IPv4 TCP 且处于可断开状态（非监听）的行显示断开入口。
+function canClose(p: PortRow) {
+  return p.protocol === 'TCP' && p.ipVersion === 'v4' && p.state !== 'LISTENING'
+}
+
+async function closeConn(p: PortRow) {
+  if (!canClose(p) || killing.value !== null) return
+  const ans = await Dialogs.Question({
+    Title: '确认断开连接',
+    Message: `将断开 ${p.localAddr}:${p.localPort} ↔ ${p.remoteAddr}:${p.remotePort} 这一条连接。\n只断开连接，不结束进程；可能弹出管理员授权。确认继续吗？`,
+    Buttons: [
+      { Label: 'No', IsCancel: true },
+      { Label: 'Yes', IsDefault: true },
+    ],
+  })
+  if (ans !== 'Yes') return
+  killing.value = p.pid
+  try {
+    const r = await PortService.CloseConnection({
+      ipVersion: 'v4', localAddr: p.localAddr, localPort: p.localPort,
+      remoteAddr: p.remoteAddr, remotePort: p.remotePort, pid: p.pid,
+    })
+    toast(r.message || '已断开连接', 'success')
+    await refresh()
+  } catch (e) {
+    toast(e instanceof Error ? e.message : String(e), 'error')
+  } finally {
+    killing.value = null
+  }
+}
+
 onMounted(refresh)
 onBeforeUnmount(() => {
   if (t) clearTimeout(t)
@@ -176,17 +207,17 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="table">
-      <div class="thead row">
-        <div class="c-proto">协议</div>
-        <div class="c-port">端口</div>
-        <div class="c-addr">本地地址</div>
-        <div class="c-remote">远程地址</div>
-        <div class="c-state">状态</div>
-        <div class="c-proc">进程</div>
-        <div class="c-pid">PID</div>
-        <div class="c-act">操作</div>
-      </div>
       <div class="tbody scroll">
+        <div class="thead row">
+          <div class="c-proto">协议</div>
+          <div class="c-port">端口</div>
+          <div class="c-addr">本地地址</div>
+          <div class="c-remote">远程地址</div>
+          <div class="c-state">状态</div>
+          <div class="c-proc">进程</div>
+          <div class="c-pid">PID</div>
+          <div class="c-act">操作</div>
+        </div>
         <div v-if="!loading && displayed.length === 0" class="empty">没有匹配的端口</div>
         <div v-for="p in displayed" :key="p._id" class="row body">
           <div class="c-proto"><span class="badge" :class="p.protocol.toLowerCase()">{{ p.protocol }}</span></div>
@@ -206,6 +237,12 @@ onBeforeUnmount(() => {
               :disabled="killing !== null"
               @click="kill(p)"
             >{{ killing === p.pid ? '…' : '结束' }}</button>
+            <button
+              v-if="canClose(p)"
+              class="close"
+              :disabled="killing !== null"
+              @click="closeConn(p)"
+            >断开</button>
           </div>
         </div>
       </div>
@@ -239,8 +276,8 @@ onBeforeUnmount(() => {
 .refresh:disabled { opacity: 0.5; }
 .spinning { display: inline-block; animation: spin 0.9s linear infinite; }
 .table { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--panel-bg); overflow: hidden; min-height: 0; }
-.row { display: grid; grid-template-columns: 70px 80px 1.6fr 1.4fr 110px 1.8fr 70px 70px; align-items: center; }
-.thead { padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
+.row { display: grid; grid-template-columns: 70px 80px 1.6fr 1.4fr 110px 1.8fr 70px 118px; align-items: center; }
+.thead { position: sticky; top: 0; z-index: 1; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
 .c-pid, .c-act, .c-port { text-align: right; padding-right: 6px; }
 .c-addr, .c-remote, .c-proc { overflow: hidden; }
 .tbody { flex: 1; overflow-y: auto; min-height: 0; }
@@ -256,6 +293,8 @@ onBeforeUnmount(() => {
 .proc-path { font-size: 10px; color: var(--text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kill { padding: 3px 10px; background: var(--red); color: #fff; border: none; border-radius: 99px; font-size: 11px; font-weight: 600; }
 .kill:disabled { opacity: 0.5; }
+.close { padding: 3px 10px; background: var(--field-bg); color: var(--text-2); border: 1px solid var(--hairline); border-radius: 99px; font-size: 11px; margin-left: 4px; }
+.close:disabled { opacity: 0.5; }
 .empty { padding: 40px; text-align: center; color: var(--text-4); font-size: 12px; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 12px; color: var(--text-3); }
 .pager button { padding: 5px 12px; background: var(--field-bg); border: 1px solid var(--hairline); border-radius: var(--radius-sm); color: var(--text-2); }

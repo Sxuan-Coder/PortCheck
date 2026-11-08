@@ -110,14 +110,14 @@ onMounted(load)
       <button class="refresh" :disabled="loading" @click="load"><span :class="{ spinning: loading }">⟳</span> 刷新</button>
     </div>
     <div class="table">
-      <div class="row head">
-        <div class="c-name">名称</div>
-        <div class="c-cmd">命令 / 路径</div>
-        <div class="c-loc">来源</div>
-        <div class="c-state">状态</div>
-        <div class="c-act">操作</div>
-      </div>
       <div class="tbody scroll">
+        <div class="row head">
+          <div class="c-name">名称</div>
+          <div class="c-cmd">命令 / 路径</div>
+          <div class="c-loc">来源</div>
+          <div class="c-state">状态</div>
+          <div class="c-act">操作</div>
+        </div>
         <div v-if="!loading && filtered().length === 0" class="empty">没有启动项</div>
         <div v-for="(s, i) in filtered()" :key="s.name + i" class="row body" :class="{ disabled: s.disabled }">
           <div class="c-name">
@@ -160,7 +160,7 @@ onMounted(load)
 .spinning { display: inline-block; animation: spin 0.9s linear infinite; }
 .table { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--panel-bg); overflow: hidden; min-height: 0; }
 .row { display: grid; grid-template-columns: 1.2fr 1.8fr 100px 80px 130px; align-items: center; }
-.row.head { padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
+.row.head { position: sticky; top: 0; z-index: 1; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; color: var(--text-3); }
 .c-name, .c-cmd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
 .c-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .app-ico { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; object-fit: contain; background: var(--field-bg); }

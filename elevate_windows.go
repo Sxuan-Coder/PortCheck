@@ -233,7 +233,7 @@ func shellExecuteRunAs(exe string, args []string) error {
 	if r1 == 0 {
 		// 用户取消 UAC 时通常返回 ERROR_CANCELLED (1223)。
 		if errors.Is(callErr, errorCancelled) {
-			return errors.New("已取消管理员授权")
+			return errElevateCancelled
 		}
 		return fmt.Errorf("提权启动失败: %w", callErr)
 	}
@@ -249,7 +249,7 @@ func shellExecuteRunAs(exe string, args []string) error {
 	}
 	if status == uint32(windows.WAIT_TIMEOUT) {
 		_ = windows.TerminateProcess(info.HProcess, 1)
-		return errors.New("提权操作超时")
+		return errElevateTimeout
 	}
 	return nil
 }
@@ -280,7 +280,7 @@ func shellExecuteRunAsNoWait(exe string) error {
 	r1, _, callErr := procShellExecuteEx.Call(uintptr(unsafe.Pointer(info)))
 	if r1 == 0 {
 		if errors.Is(callErr, errorCancelled) {
-			return errors.New("已取消管理员授权")
+			return errElevateCancelled
 		}
 		return fmt.Errorf("提权启动失败: %w", callErr)
 	}
@@ -353,6 +353,9 @@ func runElevatedHelper(args []string) {
 	case "startup-enable":
 		opErr = enableStartupDirect(name, location)
 		result.Message = fmt.Sprintf("已启用启动项：%s", name)
+	case "tcp-close":
+		opErr = closeTCPDirect(name)
+		result.Message = "已请求断开该连接"
 	case "ping":
 		// 协议探针：不执行任何写操作。
 		result.Message = "pong"

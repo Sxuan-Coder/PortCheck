@@ -10,6 +10,7 @@ const items: { id: string; icon: string; label: string }[] = [
   { id: 'processes', icon: 'process', label: '进程管理' },
   { id: 'performance', icon: 'performance', label: '性能监视' },
   { id: 'ports', icon: 'ports', label: '端口查看' },
+  { id: 'filelock', icon: 'filelock', label: '文件占用' },
   { id: 'services', icon: 'services', label: '系统服务' },
   { id: 'startup', icon: 'startup', label: '开机启动' },
   { id: 'codingplan', icon: 'usage', label: '用量查询' },
