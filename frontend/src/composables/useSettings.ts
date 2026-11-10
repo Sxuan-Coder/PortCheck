@@ -16,6 +16,7 @@ export interface AppSettings {
   usageOverlayEnabled: boolean
   usageOverlayPosition: 'topLeft' | 'topRight'
   usageOverlayMode: 'used' | 'remaining'
+  usageOverlayRows: number
   codingPlanRefreshMinutes: number
 }
 
@@ -31,6 +32,7 @@ const settings = ref<AppSettings>({
   usageOverlayEnabled: false,
   usageOverlayPosition: 'topRight',
   usageOverlayMode: 'used',
+  usageOverlayRows: 1,
   codingPlanRefreshMinutes: 5,
 })
 
@@ -68,6 +70,7 @@ export function useSettings() {
         usageOverlayEnabled: !!s.usageOverlayEnabled,
         usageOverlayPosition: s.usageOverlayPosition === 'topLeft' ? 'topLeft' : 'topRight',
         usageOverlayMode: s.usageOverlayMode === 'remaining' ? 'remaining' : 'used',
+        usageOverlayRows: Math.min(4, Math.max(1, Number(s.usageOverlayRows) || 1)),
         codingPlanRefreshMinutes: [1, 3, 5, 10, 15, 30].includes(s.codingPlanRefreshMinutes)
           ? s.codingPlanRefreshMinutes
           : 5,
@@ -123,10 +126,20 @@ export function useSettings() {
     }
   }
 
+  // blurActiveElement 移除当前焦点。悬浮窗创建/销毁会瞬间压扁主窗口 WebView2
+  // 渲染面，浏览器会为保持「聚焦元素」可见而滚动根视口，恢复后偏移卡死（表现为
+  // 页面整体上移、下方留黑、拖拽失效）。开关/位置变更前先 blur，让浏览器没有
+  // 需要保持可见的聚焦元素，从源头避免该滚动（Go 侧另有 scrollIntoView 兜底）。
+  function blurActiveElement() {
+    const el = document.activeElement as HTMLElement | null
+    if (el && el !== document.body) el.blur()
+  }
+
   // applyOverlay 同步悬浮窗运行时状态并静默持久化（不弹"设置已保存" toast，避免打扰）。
   // 由设置页开关 / 位置下拉调用，立即生效。
   async function applyOverlay() {
     await ensureLoaded()
+    blurActiveElement()
     try {
       await ApplyOverlay(settings.value.overlayEnabled, settings.value.overlayPosition)
       await SettingsService.SaveSettings(settings.value)
@@ -138,6 +151,7 @@ export function useSettings() {
   // applyUsageOverlay 同理：同步「用量悬浮窗」（Coding Plan 圆环图表）并静默持久化。
   async function applyUsageOverlay() {
     await ensureLoaded()
+    blurActiveElement()
     try {
       await ApplyUsageOverlay(settings.value.usageOverlayEnabled, settings.value.usageOverlayPosition)
       await SettingsService.SaveSettings(settings.value)

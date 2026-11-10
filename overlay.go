@@ -15,7 +15,7 @@ const (
 	overlayMargin = 8
 
 	// 用量悬浮窗（Coding Plan 圆环图表）：高度随账号行数动态变化（SetUsageRows）。
-	usageOverlayWidth   = 200
+	usageOverlayWidth   = 250
 	usageOverlayRowH    = 56
 	usageOverlayPad     = 8
 	usageOverlayMinRows = 1
@@ -65,6 +65,8 @@ func (s *OverlayService) ServiceStartup(_ context.Context, _ application.Service
 	}
 	if settings.UsageOverlayEnabled {
 		s.usagePosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
+		// 恢复上次行数，让窗口创建时就是正确高度，避免「先 1 行再长高」的首帧跳变。
+		s.usageRows = settings.UsageOverlayRows
 		pendingUsageRestore = true
 	}
 	return nil
@@ -133,13 +135,13 @@ func (s *OverlayService) Apply(enabled bool, position string) error {
 			BackgroundColour: application.NewRGBA(0, 0, 0, 0),
 			URL:              overlayURL,
 		})
-			s.win.Show()
-			// 修正 WS_EX_NOACTIVATE 副作用（详见 fixOverlayExStyle 注释），必须 Show 后调用。
-			fixOverlayExStyle(s.win)
-			// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
-			s.win.SetPosition(x, y)
-			resetMainWindowScroll()
-			return nil
+		s.win.Show()
+		// 修正 WS_EX_NOACTIVATE 副作用（详见 fixOverlayExStyle 注释），必须 Show 后调用。
+		fixOverlayExStyle(s.win)
+		// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
+		s.win.SetPosition(x, y)
+		resetMainWindowScroll()
+		return nil
 	}
 
 	// 已存在：仅更新位置。
@@ -194,13 +196,13 @@ func (s *OverlayService) ApplyUsage(enabled bool, position string) error {
 			BackgroundColour: application.NewRGBA(0, 0, 0, 0),
 			URL:              usageOverlayURL,
 		})
-			s.usageWin.Show()
-			// 修正 WS_EX_NOACTIVATE 副作用（详见 fixOverlayExStyle 注释），必须 Show 后调用。
-			fixOverlayExStyle(s.usageWin)
-			// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
-			s.usageWin.SetPosition(x, y)
-			resetMainWindowScroll()
-			return nil
+		s.usageWin.Show()
+		// 修正 WS_EX_NOACTIVATE 副作用（详见 fixOverlayExStyle 注释），必须 Show 后调用。
+		fixOverlayExStyle(s.usageWin)
+		// 某些 webview 实现会忽略创建时的 X/Y 而默认居中，显式定位一次确保贴角。
+		s.usageWin.SetPosition(x, y)
+		resetMainWindowScroll()
+		return nil
 	}
 
 	// 已存在：仅更新位置。
@@ -231,6 +233,12 @@ func (s *OverlayService) SetUsageRows(rows int) error {
 	s.usageRows = rows
 	if s.usageWin != nil {
 		s.usageWin.SetSize(usageOverlayWidth, usageOverlayHeightFor(rows))
+	}
+	// 持久化行数：下次（含重启后）创建悬浮窗时直接用对高度，避免首帧 1 行再长高的跳变。
+	// 行数仅在账号增删时变化，低频，同步写盘可接受。
+	if st, err := (&SettingsService{}).GetSettings(); err == nil {
+		st.UsageOverlayRows = rows
+		_ = (&SettingsService{}).SaveSettings(st)
 	}
 	return nil
 }

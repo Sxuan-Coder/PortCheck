@@ -7,9 +7,10 @@ import type { CodingPlanAccount, CodingPlanQuota, CodingPlanUsage } from '../../
 import { usageLevel, LEVEL_COLOR, countdown, providerMeta, balanceLevel, balancePct, currencySymbol } from '../lib/codingplans'
 
 // 用量悬浮窗：Coding Plan 圆环图表视图，透明背景置顶。
-// 每个账号一行：左侧圆环显示 5 小时窗口百分比（已用/剩余由设置项 usageOverlayMode
-// 决定，圆环颜色始终按「已用程度」分级），右侧账号名 + 「重置倒计时 · 周百分比」；
-// 余额型供应商（DeepSeek）的圆环按「余额余量 / 预警值 ×10」填充、颜色按预警分档。
+// 每个账号一行：左侧并排展示全部可用窗口（5 小时 / 周 / 月）的圆环百分比
+// （已用/剩余由设置项 usageOverlayMode 决定，圆环颜色始终按「已用程度」分级），
+// 右侧账号名 + 各窗口重置倒计时；余额型供应商（DeepSeek）的圆环按
+// 「余额余量 / 预警值 ×10」填充、颜色按预警分档。
 // 数据自取：启动查询一次 + 按设置间隔定时轮询（默认 5 分钟）；主窗口增删账号时通过 codingplan:changed
 // 事件即时刷新。窗口高度由后端按行数调整（SetUsageRows）。
 
@@ -67,10 +68,19 @@ function syncRows() {
 const shown = () => accounts.value.slice(0, MAX_ACCOUNTS)
 const moreCount = () => accounts.value.length - MAX_ACCOUNTS
 
-// 圆环展示 5 小时桶；套餐只有周桶时退化展示周桶，两者皆无则空环。
-function quotaOf(u: CodingPlanUsage | null | undefined): CodingPlanQuota | null {
-  if (!u || u.status !== 'ok') return null
-  return u.fiveHour ?? u.weekly
+// 配额桶：按 5 小时 / 周 / 月顺序全部并排展示，缺失的桶自动跳过。
+// 普通供应商最多两环，OpenCode Go 显示三环。
+interface OverlayBucket {
+  label: string
+  quota: CodingPlanQuota
+}
+function quotaBuckets(u: CodingPlanUsage | null | undefined): OverlayBucket[] {
+  if (!u || u.status !== 'ok' || u.balance) return []
+  const list: OverlayBucket[] = []
+  if (u.fiveHour) list.push({ label: '5h', quota: u.fiveHour })
+  if (u.weekly) list.push({ label: '7d', quota: u.weekly })
+  if (u.monthly) list.push({ label: '本月', quota: u.monthly })
+  return list
 }
 // 余额型（DeepSeek）：环填充 = 余额余量（满环 = 预警值 ×10），不受已用/剩余模式影响。
 function balanceOf(u: CodingPlanUsage | null | undefined) {
@@ -78,31 +88,21 @@ function balanceOf(u: CodingPlanUsage | null | undefined) {
   return u.balance ?? null
 }
 // 按展示模式换算百分比：remaining 模式显示 100-已用。
-const dispPct = (q: CodingPlanQuota | null) =>
-  q ? (mode.value === 'remaining' ? 100 - q.usedPercent : q.usedPercent) : 0
-// 环填充：余额型按余额余量，配额型按（模式换算后的）已用/剩余百分比。
-function ringPct(a: CodingPlanAccount, u: CodingPlanUsage | null | undefined): number {
-  const b = balanceOf(u)
-  if (b) return balancePct(b.total, a.alertAmount)
-  return Math.min(100, Math.max(0, dispPct(quotaOf(u))))
-}
+const dispPct = (q: CodingPlanQuota) =>
+  Math.min(100, Math.max(0, mode.value === 'remaining' ? 100 - q.usedPercent : q.usedPercent))
 // 颜色：余额型按预警分档（跌破预警值即红），配额型始终按已用程度分级。
-function ringColor(a: CodingPlanAccount, u: CodingPlanUsage | null | undefined): string {
+const quotaColor = (q: CodingPlanQuota) => LEVEL_COLOR[usageLevel(q.usedPercent)]
+const balanceColor = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
   const b = balanceOf(u)
-  if (b) return LEVEL_COLOR[balanceLevel(b.total, a.alertAmount, b.available)]
-  const q = quotaOf(u)
-  return q ? LEVEL_COLOR[usageLevel(q.usedPercent)] : 'rgba(255,255,255,0.25)'
+  return b ? LEVEL_COLOR[balanceLevel(b.total, a.alertAmount, b.available)] : 'rgba(255,255,255,0.25)'
 }
-const ringOffset = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) =>
-  C * (1 - ringPct(a, u) / 100)
-const ringText = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
-  const q = quotaOf(u)
-  if (q) return `${Math.round(dispPct(q))}`
-  return balanceOf(u) ? `${Math.round(ringPct(a, u))}` : '—'
+const quotaPct = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
+  const b = balanceOf(u)
+  return b ? balancePct(b.total, a.alertAmount) : 0
 }
+const ringOffset = (pct: number) => C * (1 - pct / 100)
 
-// 第二行文案：常态显示「重置 倒计时 · 周 X%」；无 5h 桶时退化显示周桶倒计时。
-// 剩余模式下周期数字同样换算为剩余并加「剩」前缀，避免与已用混淆。
+// 第二行文案：显示各窗口的重置倒计时（百分比已在圆环内）；
 // 余额型显示「余额 ¥xx · 预警 ¥xx」。
 const line2 = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
   if (!u) return '加载中…'
@@ -114,19 +114,11 @@ const line2 = (a: CodingPlanAccount, u: CodingPlanUsage | null | undefined) => {
     const base = `余额 ${s}${u.balance.total.toFixed(2)}`
     return a.alertAmount > 0 ? `${base} · 预警 ${s}${a.alertAmount}` : base
   }
-  const weekly = (wk: CodingPlanQuota | null) => {
-    if (!wk) return '无周限额'
-    const v = mode.value === 'remaining' ? 100 - wk.usedPercent : wk.usedPercent
-    return mode.value === 'remaining' ? `周剩 ${Math.round(v)}%` : `周 ${Math.round(v)}%`
-  }
-  if (u.fiveHour) {
-    const cd = countdown(u.fiveHour.resetsAt, now.value)
-    return `${cd ? `重置 ${cd} · ` : ''}${weekly(u.weekly)}`
-  }
-  if (u.weekly) {
-    const cd = countdown(u.weekly.resetsAt, now.value)
-    return cd ? `周重置 ${cd}` : '仅周配额'
-  }
+  // 倒计时按圆环顺序（5h / 7d / 本月）依次展示，避免与环下标签重复。
+  const cds = quotaBuckets(u)
+    .map((b) => countdown(b.quota.resetsAt, now.value))
+    .filter(Boolean)
+  if (cds.length) return `重置 ${cds.join(' · ')}`
   return '无配额数据'
 }
 
@@ -197,21 +189,58 @@ const cancelUsageConfig = Events.On('usage-overlay:config', onUsageConfig)
     </div>
 
     <div v-for="a in shown()" :key="a.id" class="row">
-      <svg class="ring" viewBox="0 0 36 36">
-        <circle class="track" cx="18" cy="18" :r="R" />
-        <circle
-          class="val"
-          cx="18"
-          cy="18"
-          :r="R"
-          :stroke="ringColor(a, usages[a.id])"
-          :stroke-dasharray="C"
-          :stroke-dashoffset="ringOffset(a, usages[a.id])"
-        />
-        <text class="num" x="18" y="18.5" text-anchor="middle" dominant-baseline="central">
-          {{ ringText(a, usages[a.id]) }}
-        </text>
-      </svg>
+      <div class="rings">
+        <!-- 余额型（DeepSeek）：单个金额圆环 -->
+        <div v-if="balanceOf(usages[a.id])" class="ring-cell">
+          <svg class="ring" viewBox="0 0 36 36">
+            <circle class="track" cx="18" cy="18" :r="R" />
+            <circle
+              class="val"
+              cx="18"
+              cy="18"
+              :r="R"
+              :stroke="balanceColor(a, usages[a.id])"
+              :stroke-dasharray="C"
+              :stroke-dashoffset="ringOffset(quotaPct(a, usages[a.id]))"
+            />
+            <text class="num" x="18" y="18.5" text-anchor="middle" dominant-baseline="central">
+              {{ Math.round(quotaPct(a, usages[a.id])) }}
+            </text>
+          </svg>
+          <span class="ring-label">余额</span>
+        </div>
+
+        <!-- 配额型：5 小时 + 周并排，各自独立圆环 -->
+        <template v-else-if="quotaBuckets(usages[a.id]).length">
+          <div v-for="(b, i) in quotaBuckets(usages[a.id])" :key="i" class="ring-cell">
+            <svg class="ring" viewBox="0 0 36 36">
+              <circle class="track" cx="18" cy="18" :r="R" />
+              <circle
+                class="val"
+                cx="18"
+                cy="18"
+                :r="R"
+                :stroke="quotaColor(b.quota)"
+                :stroke-dasharray="C"
+                :stroke-dashoffset="ringOffset(dispPct(b.quota))"
+              />
+              <text class="num" x="18" y="18.5" text-anchor="middle" dominant-baseline="central">
+                {{ Math.round(dispPct(b.quota)) }}
+              </text>
+            </svg>
+            <span class="ring-label">{{ b.label }}</span>
+          </div>
+        </template>
+
+        <!-- 无数据：空环占位 -->
+        <div v-else class="ring-cell">
+          <svg class="ring" viewBox="0 0 36 36">
+            <circle class="track" cx="18" cy="18" :r="R" />
+          </svg>
+          <span class="ring-label">—</span>
+        </div>
+      </div>
+
       <div class="txt">
         <div class="name">{{ a.name || providerMeta(a.provider).label }}</div>
         <div class="sub">{{ line2(a, usages[a.id]) }}</div>
@@ -243,14 +272,31 @@ const cancelUsageConfig = Events.On('usage-overlay:config', onUsageConfig)
   display: flex;
   align-items: center;
   gap: 9px;
-  height: 48px;
-  padding: 4px 2px;
+  height: 52px;
+  padding: 2px;
+}
+.rings {
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.ring-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 .ring {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   transform: rotate(-90deg);
+}
+.ring-label {
+  font-size: 9px;
+  line-height: 10px;
+  opacity: 0.72;
 }
 .ring .track {
   fill: none;

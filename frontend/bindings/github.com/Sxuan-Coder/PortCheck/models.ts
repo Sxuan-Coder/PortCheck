@@ -89,14 +89,19 @@ export class CodingPlanAccount {
     "name": string;
 
     /**
-     * zhipu / kimi / minimax / zenmux / deepseek
+     * zhipu / kimi / minimax / zenmux / deepseek / opencode
      */
     "provider": string;
 
     /**
-     * zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站
+     * zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站；opencode 记录所选接入端点
      */
     "baseUrl": string;
+
+    /**
+     * opencode 接入协议：openai / responses / anthropic（仅记录用户选择）
+     */
+    "endpoint": string;
     "apiKey": string;
 
     /**
@@ -118,6 +123,9 @@ export class CodingPlanAccount {
         }
         if (!("baseUrl" in $$source)) {
             this["baseUrl"] = "";
+        }
+        if (!("endpoint" in $$source)) {
+            this["endpoint"] = "";
         }
         if (!("apiKey" in $$source)) {
             this["apiKey"] = "";
@@ -201,7 +209,7 @@ export class CodingPlanBalance {
 }
 
 /**
- * CodingPlanQuota 描述一个用量窗口（5 小时 / 周）的百分比与重置时间。
+ * CodingPlanQuota 描述一个用量窗口（5 小时 / 周 / 月）的百分比与重置时间。
  */
 export class CodingPlanQuota {
     /**
@@ -246,7 +254,7 @@ export class CodingPlanQuota {
 /**
  * CodingPlanUsage 是单账号一次用量查询的结果；失败不返回 Go 错误，
  * 而是 Status=expired/error + Error 带原因，便于前端按卡片展示失败态。
- * 配额型供应商填 FiveHour/Weekly，余额型供应商填 Balance（互斥，nil 区分形态）。
+ * 配额型供应商填 FiveHour/Weekly/Monthly，余额型供应商填 Balance（互斥，nil 区分形态）。
  */
 export class CodingPlanUsage {
     "accountId": string;
@@ -272,6 +280,11 @@ export class CodingPlanUsage {
     "weekly": CodingPlanQuota | null;
 
     /**
+     * 月窗口；nil 表示无该桶（目前仅 OpenCode Go）
+     */
+    "monthly": CodingPlanQuota | null;
+
+    /**
      * 余额（DeepSeek）；nil 表示配额型
      */
     "balance": CodingPlanBalance | null;
@@ -295,6 +308,9 @@ export class CodingPlanUsage {
         if (!("weekly" in $$source)) {
             this["weekly"] = null;
         }
+        if (!("monthly" in $$source)) {
+            this["monthly"] = null;
+        }
         if (!("balance" in $$source)) {
             this["balance"] = null;
         }
@@ -314,7 +330,8 @@ export class CodingPlanUsage {
     static createFrom($$source: any = {}): CodingPlanUsage {
         const $$createField3_0 = $$createType1;
         const $$createField4_0 = $$createType1;
-        const $$createField5_0 = $$createType3;
+        const $$createField5_0 = $$createType1;
+        const $$createField6_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("fiveHour" in $$parsedSource) {
             $$parsedSource["fiveHour"] = $$createField3_0($$parsedSource["fiveHour"]);
@@ -322,8 +339,11 @@ export class CodingPlanUsage {
         if ("weekly" in $$parsedSource) {
             $$parsedSource["weekly"] = $$createField4_0($$parsedSource["weekly"]);
         }
+        if ("monthly" in $$parsedSource) {
+            $$parsedSource["monthly"] = $$createField5_0($$parsedSource["monthly"]);
+        }
         if ("balance" in $$parsedSource) {
-            $$parsedSource["balance"] = $$createField5_0($$parsedSource["balance"]);
+            $$parsedSource["balance"] = $$createField6_0($$parsedSource["balance"]);
         }
         return new CodingPlanUsage($$parsedSource as Partial<CodingPlanUsage>);
     }
@@ -780,6 +800,11 @@ export class Settings {
     "usageOverlayMode": string;
 
     /**
+     * 用量悬浮窗行数（1-4），创建窗口时用对高度避免首帧跳变
+     */
+    "usageOverlayRows": number;
+
+    /**
      * 用量查询自动刷新间隔（分钟），默认 5
      */
     "codingPlanRefreshMinutes": number;
@@ -818,6 +843,9 @@ export class Settings {
         }
         if (!("usageOverlayMode" in $$source)) {
             this["usageOverlayMode"] = "";
+        }
+        if (!("usageOverlayRows" in $$source)) {
+            this["usageOverlayRows"] = 0;
         }
         if (!("codingPlanRefreshMinutes" in $$source)) {
             this["codingPlanRefreshMinutes"] = 0;

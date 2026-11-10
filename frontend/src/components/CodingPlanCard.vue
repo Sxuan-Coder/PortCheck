@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Coding Plan 用量卡片：CPU 占用风格的桌面组件。
-// 5 小时窗口用环形仪表展示，周用量用进度条展示；颜色分级与 cc-switch 一致
+// 5 小时 / 周 / 月窗口并排用环形仪表展示（缺失桶自动跳过）；颜色分级与 cc-switch 一致
 // （<70% 绿、70-89% 橙、≥90% 红），重置倒计时格式 4h41m / 2d22h。
 // 余额型供应商（DeepSeek）为独立分支：环形仪表中心显示金额（满环 = 预警值 ×10），
 // 进度条显示余额余量，余额 ≤ 预警值或不足以调用时整卡红态。
@@ -33,8 +33,24 @@ const C = 2 * Math.PI * R
 const meta = () => providerMeta(props.account.provider)
 const colorOf = (q: CodingPlanQuota | null | undefined) => LEVEL_COLOR[q ? usageLevel(q.usedPercent) : 'ok']
 const pctText = (q: CodingPlanQuota) => `${Math.round(q.usedPercent)}%`
-const barWidth = (q: CodingPlanQuota) => `${Math.min(100, Math.max(0, q.usedPercent))}%`
 const ringOffset = (q: CodingPlanQuota) => C * (1 - Math.min(100, Math.max(0, q.usedPercent)) / 100)
+
+// 配额桶按 5 小时 / 周 / 月顺序并排展示；缺失的桶自动跳过。
+// 现有供应商最多两个桶，OpenCode Go 有三个月窗口。
+interface QuotaBucket {
+  key: string
+  label: string
+  quota: CodingPlanQuota
+}
+function quotaBuckets(): QuotaBucket[] {
+  const u = props.usage
+  if (!u || u.balance) return []
+  const list: QuotaBucket[] = []
+  if (u.fiveHour) list.push({ key: '5h', label: '5 小时', quota: u.fiveHour })
+  if (u.weekly) list.push({ key: '7d', label: '7 天', quota: u.weekly })
+  if (u.monthly) list.push({ key: '30d', label: '本月', quota: u.monthly })
+  return list
+}
 
 // 余额型（DeepSeek）展示换算
 const balLevel = () => {
@@ -151,47 +167,36 @@ const balUnavailable = () => props.usage?.balance?.available === false
         </div>
       </template>
 
-      <!-- 配额型 -->
+      <!-- 配额型：5 小时 / 周 / 月并排圆环 -->
       <template v-else>
-        <div v-if="usage.fiveHour" class="five">
-        <div class="gauge">
-          <svg viewBox="0 0 64 64">
-            <circle class="track" cx="32" cy="32" :r="R" />
-            <circle
-              class="val"
-              cx="32"
-              cy="32"
-              :r="R"
-              :stroke="colorOf(usage.fiveHour)"
-              :stroke-dasharray="C"
-              :stroke-dashoffset="ringOffset(usage.fiveHour)"
-            />
-          </svg>
-          <span class="gauge-num mono" :style="{ color: colorOf(usage.fiveHour) }">{{ pctText(usage.fiveHour) }}</span>
-        </div>
-        <div class="info">
-          <div class="label">5 小时窗口</div>
-          <div class="reset">
-            重置 <b class="mono">{{ countdown(usage.fiveHour.resetsAt, now) || '—' }}</b>
+        <div v-if="quotaBuckets().length" class="quota-row">
+          <div
+            v-for="b in quotaBuckets()"
+            :key="b.key"
+            class="quota-item"
+            :title="b.quota.usedLabel || undefined"
+          >
+            <div class="gauge">
+              <svg viewBox="0 0 64 64">
+                <circle class="track" cx="32" cy="32" :r="R" />
+                <circle
+                  class="val"
+                  cx="32"
+                  cy="32"
+                  :r="R"
+                  :stroke="colorOf(b.quota)"
+                  :stroke-dasharray="C"
+                  :stroke-dashoffset="ringOffset(b.quota)"
+                />
+              </svg>
+              <span class="gauge-num mono" :style="{ color: colorOf(b.quota) }">{{ pctText(b.quota) }}</span>
+            </div>
+            <div class="quota-label">{{ b.label }}</div>
+            <div class="quota-reset">重置 {{ countdown(b.quota.resetsAt, now) || '—' }}</div>
+            <div v-if="b.quota.usedLabel" class="quota-usd mono">{{ b.quota.usedLabel }}</div>
           </div>
-          <div v-if="usage.fiveHour.usedLabel" class="usd mono">{{ usage.fiveHour.usedLabel }}</div>
         </div>
-      </div>
-
-      <div v-if="usage.weekly" class="week">
-        <div class="week-head">
-          <span class="label">周用量（7 天）</span>
-          <span class="pct mono" :style="{ color: colorOf(usage.weekly) }">{{ pctText(usage.weekly) }}</span>
-        </div>
-        <div class="meter">
-          <span :style="{ width: barWidth(usage.weekly), background: colorOf(usage.weekly) }" />
-        </div>
-        <div class="reset">
-          重置 <b class="mono">{{ countdown(usage.weekly.resetsAt, now) || '—' }}</b>
-          <span v-if="usage.weekly.usedLabel" class="usd mono">· {{ usage.weekly.usedLabel }}</span>
-        </div>
-      </div>
-      <div v-else class="week none">该套餐无周限额</div>
+        <div v-else class="week none">该套餐无配额数据</div>
       </template>
     </div>
 
@@ -394,7 +399,45 @@ const balUnavailable = () => props.usage?.balance?.available === false
   font-weight: 600;
 }
 
-/* 周用量进度条 */
+/* 配额型：5 小时 / 周 / 月并排圆环 */
+.quota-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  gap: 6px;
+}
+.quota-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.quota-row .gauge {
+  width: 60px;
+  height: 60px;
+}
+.quota-label {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.quota-reset {
+  font-size: 10px;
+  color: var(--text-4);
+  white-space: nowrap;
+}
+.quota-usd {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--text-4);
+}
+
+/* 进度条（余额余量） */
 .week {
   display: flex;
   flex-direction: column;

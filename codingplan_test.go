@@ -294,10 +294,10 @@ func TestDeepSeek缺BalanceInfos不崩溃(t *testing.T) {
 
 // ── 供应商注册表 ──
 
-// 五家供应商全部注册且有默认显示名；查询函数非空。
+// 六家供应商全部注册且有默认显示名；查询函数非空。
 func Test供应商注册表全覆盖(t *testing.T) {
 	for _, p := range []string{
-		codingPlanZhipu, codingPlanKimi, codingPlanMiniMax, codingPlanZenMux, codingPlanDeepseek,
+		codingPlanZhipu, codingPlanKimi, codingPlanMiniMax, codingPlanZenMux, codingPlanDeepseek, codingPlanOpenCode,
 	} {
 		provider, ok := codingPlanProviders[p]
 		if !ok {
@@ -306,6 +306,62 @@ func Test供应商注册表全覆盖(t *testing.T) {
 		}
 		if provider.label == "" || provider.query == nil {
 			t.Errorf("供应商 %q 注册不完整：label/query 为空", p)
+		}
+	}
+}
+
+// ── OpenCode Go：rolling/weekly/monthly 三窗口 ──
+
+// 官方响应形态：percent 为 0-100 整数，resetsAt 为 ISO 8601；
+// status=rate-limited 只表示窗口触顶，仍应按用量展示。
+func TestOpenCode三窗口解析(t *testing.T) {
+	body := mustJSON(t, `{
+		"usage": {
+			"rolling": { "status": "ok", "percent": 100, "resetsAt": "2026-11-16T08:00:00Z" },
+			"weekly":  { "status": "ok", "percent": 99,  "resetsAt": "2026-11-20T10:00:00Z" },
+			"monthly": { "status": "rate-limited", "percent": 100, "resetsAt": "2026-11-30T00:00:00Z" }
+		}}`)
+	usage, err := parseOpenCodeUsage(body)
+	if err != nil {
+		t.Fatalf("解析失败：%v", err)
+	}
+	if usage.FiveHour == nil || usage.Weekly == nil || usage.Monthly == nil {
+		t.Fatalf("期望三个窗口，got 5h=%v weekly=%v monthly=%v", usage.FiveHour, usage.Weekly, usage.Monthly)
+	}
+	if usage.FiveHour.UsedPercent != 100 || usage.Weekly.UsedPercent != 99 || usage.Monthly.UsedPercent != 100 {
+		t.Errorf("百分比解析错误：%v / %v / %v",
+			usage.FiveHour.UsedPercent, usage.Weekly.UsedPercent, usage.Monthly.UsedPercent)
+	}
+	if usage.FiveHour.ResetsAt != "2026-11-16T08:00:00Z" {
+		t.Errorf("resetsAt 应原样透传，got %q", usage.FiveHour.ResetsAt)
+	}
+}
+
+// percent 缺失或非数字的窗口视为无该桶，其余窗口照常展示。
+func TestOpenCode缺失窗口跳过(t *testing.T) {
+	body := mustJSON(t, `{
+		"usage": {
+			"rolling": { "status": "ok", "percent": "42", "resetsAt": "2026-11-16T08:00:00Z" },
+			"weekly":  { "status": "ok" },
+			"monthly": { "status": "ok", "percent": "invalid" }
+		}}`)
+	usage, err := parseOpenCodeUsage(body)
+	if err != nil {
+		t.Fatalf("解析失败：%v", err)
+	}
+	if usage.FiveHour == nil || usage.FiveHour.UsedPercent != 42 {
+		t.Errorf("rolling 字符串百分比应解析为 42，got %+v", usage.FiveHour)
+	}
+	if usage.Weekly != nil || usage.Monthly != nil {
+		t.Errorf("缺失 percent 的窗口不应产生桶")
+	}
+}
+
+// usage 字段缺失 / 三窗口全缺失时返回错误，由上层转 error 态。
+func TestOpenCode缺Usage返回错误(t *testing.T) {
+	for _, s := range []string{`{}`, `{ "usage": {} }`, `{ "usage": { "weekly": { "status": "ok" } } }`} {
+		if _, err := parseOpenCodeUsage(mustJSON(t, s)); err == nil {
+			t.Errorf("%s 应返回解析错误", s)
 		}
 	}
 }

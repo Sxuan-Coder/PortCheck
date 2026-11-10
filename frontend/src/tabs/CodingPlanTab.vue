@@ -9,7 +9,7 @@ import CodingPlanCard from '../components/CodingPlanCard.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useToast } from '../composables/useToast'
 import { useSettings } from '../composables/useSettings'
-import { PROVIDERS, defaultRegion, providerMeta } from '../lib/codingplans'
+import { PROVIDERS, defaultEndpoint, defaultRegion, endpointURL, providerMeta } from '../lib/codingplans'
 
 const { toast } = useToast()
 const { settings, enableUsageOverlayIfDisabled } = useSettings()
@@ -82,6 +82,7 @@ const form = reactive({
   name: '',
   provider: 'zhipu',
   region: defaultRegion('zhipu'),
+  endpoint: defaultEndpoint('zhipu'),
   baseUrl: '',
   apiKey: '',
   alertAmount: '', // 余额预警值（元），仅余额型供应商展示；空 = 不提醒
@@ -92,6 +93,7 @@ function resetForm() {
   form.name = ''
   form.provider = 'zhipu'
   form.region = defaultRegion('zhipu')
+  form.endpoint = defaultEndpoint('zhipu')
   form.baseUrl = ''
   form.apiKey = ''
   form.alertAmount = ''
@@ -108,6 +110,11 @@ function openEdit(a: CodingPlanAccount) {
   form.name = a.name
   form.provider = a.provider
   form.region = meta.regions?.some((r) => r.value === a.baseUrl) ? a.baseUrl : defaultRegion(a.provider)
+  // 旧配置没有 endpoint 字段时，按 baseUrl 反推协议选项。
+  form.endpoint =
+    meta.endpoints?.find((e) => e.value === a.endpoint)?.value ??
+    meta.endpoints?.find((e) => e.url === a.baseUrl)?.value ??
+    defaultEndpoint(a.provider)
   form.baseUrl = a.baseUrl
   form.apiKey = a.apiKey
   form.alertAmount = a.alertAmount > 0 ? String(a.alertAmount) : ''
@@ -119,11 +126,13 @@ watch(
   () => form.provider,
   (p) => {
     form.region = defaultRegion(p)
+    form.endpoint = defaultEndpoint(p)
   },
 )
 
 function formBaseURL(): string {
   const meta = providerMeta(form.provider)
+  if (meta.endpoints) return endpointURL(form.provider, form.endpoint)
   if (meta.needURL) return form.baseUrl.trim()
   return form.region || defaultRegion(form.provider)
 }
@@ -152,6 +161,7 @@ async function save() {
       name: form.name.trim(),
       provider: form.provider,
       baseUrl: formBaseURL(),
+      endpoint: providerMeta(form.provider).endpoints ? form.endpoint : '',
       apiKey: form.apiKey.trim(),
       alertAmount,
       createdAt: 0,
@@ -223,7 +233,7 @@ onUnmounted(() => {
     <div class="head">
       <div class="title">
         <h2>Coding Plan 用量</h2>
-        <p>5 小时窗口 / 周用量百分比监控，支持智谱 GLM · Kimi · MiniMax · ZenMux · DeepSeek（余额）</p>
+        <p>5 小时 / 周 / 月用量百分比监控，支持智谱 GLM · Kimi · MiniMax · ZenMux · OpenCode Go · DeepSeek（余额）</p>
       </div>
       <div class="actions">
         <span v-if="lastRefresh" class="updated">更新于 {{ lastRefresh }}</span>
@@ -237,7 +247,7 @@ onUnmounted(() => {
     <div v-if="!loading && accounts.length === 0" class="empty acrylic-card">
       <div class="empty-icon"><AppIcon name="usage" :size="26" /></div>
       <p class="empty-title">还没有监控任何 Coding Plan</p>
-      <p class="empty-hint">配置 API Key 后，即可在这里查看 5 小时 / 周用量百分比与重置倒计时；DeepSeek 账户则展示余额与预警</p>
+      <p class="empty-hint">配置 API Key 后，即可在这里查看 5 小时 / 周 / 月用量百分比与重置倒计时；DeepSeek 账户则展示余额与预警</p>
       <button class="add" @click="openAdd"><AppIcon name="plus" :size="13" /> 添加账号</button>
     </div>
 
@@ -275,6 +285,15 @@ onUnmounted(() => {
           <select v-model="form.region">
             <option v-for="r in providerMeta(form.provider).regions" :key="r.value" :value="r.value">
               {{ r.label }}
+            </option>
+          </select>
+        </label>
+
+        <label v-if="providerMeta(form.provider).endpoints" class="field">
+          <span>接入端点</span>
+          <select v-model="form.endpoint">
+            <option v-for="e in providerMeta(form.provider).endpoints" :key="e.value" :value="e.value">
+              {{ e.label }} · {{ e.url }}
             </option>
           </select>
         </label>

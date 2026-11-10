@@ -372,7 +372,7 @@ async function onOverlayFontSizeChange(e: Event) {
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-label">启用悬浮窗</span>
-            <span class="setting-desc">以圆环图表常驻显示 Coding Plan 的 5 小时 / 周用量百分比与重置倒计时；添加首个账号时会自动开启</span>
+            <span class="setting-desc">按套餐可用窗口（5 小时 / 周 / 月）并排圆环常驻显示用量百分比与重置倒计时；添加首个账号时会自动开启</span>
           </div>
           <label class="switch" :class="{ on: settings.usageOverlayEnabled }">
             <input

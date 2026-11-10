@@ -60,6 +60,7 @@ type Settings struct {
 	UsageOverlayEnabled  bool   `json:"usageOverlayEnabled"`  // 用量悬浮窗开关，默认关闭
 	UsageOverlayPosition string `json:"usageOverlayPosition"` // topLeft / topRight，默认 topRight
 	UsageOverlayMode     string `json:"usageOverlayMode"`     // used / remaining，默认 used
+	UsageOverlayRows     int    `json:"usageOverlayRows"`     // 用量悬浮窗行数（1-4），创建窗口时用对高度避免首帧跳变
 
 	CodingPlanRefreshMinutes int `json:"codingPlanRefreshMinutes"` // 用量查询自动刷新间隔（分钟），默认 5
 }
@@ -82,6 +83,7 @@ func DefaultSettings() Settings {
 		UsageOverlayEnabled:  false,
 		UsageOverlayPosition: overlayPositionTopRight,
 		UsageOverlayMode:     usageOverlayModeUsed,
+		UsageOverlayRows:     1,
 
 		CodingPlanRefreshMinutes: codingPlanRefreshMinutesDef,
 	}
@@ -175,6 +177,12 @@ func (s *SettingsService) GetSettings() (Settings, error) {
 	settings.OverlayFontSize = normalizeOverlayFontSize(settings.OverlayFontSize)
 	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
 	settings.UsageOverlayMode = normalizeUsageOverlayMode(settings.UsageOverlayMode)
+	if settings.UsageOverlayRows < usageOverlayMinRows {
+		settings.UsageOverlayRows = usageOverlayMinRows
+	}
+	if settings.UsageOverlayRows > usageOverlayMaxRows {
+		settings.UsageOverlayRows = usageOverlayMaxRows
+	}
 	settings.CodingPlanRefreshMinutes = normalizeCodingPlanRefreshMinutes(settings.CodingPlanRefreshMinutes)
 	return settings, nil
 }
@@ -187,6 +195,12 @@ func (s *SettingsService) SaveSettings(settings Settings) error {
 	settings.OverlayColor = normalizeOverlayColor(settings.OverlayColor)
 	settings.UsageOverlayPosition = normalizeOverlayPosition(settings.UsageOverlayPosition)
 	settings.UsageOverlayMode = normalizeUsageOverlayMode(settings.UsageOverlayMode)
+	if settings.UsageOverlayRows < usageOverlayMinRows {
+		settings.UsageOverlayRows = usageOverlayMinRows
+	}
+	if settings.UsageOverlayRows > usageOverlayMaxRows {
+		settings.UsageOverlayRows = usageOverlayMaxRows
+	}
 	settings.CodingPlanRefreshMinutes = normalizeCodingPlanRefreshMinutes(settings.CodingPlanRefreshMinutes)
 	path, err := settingsPath()
 	if err != nil {

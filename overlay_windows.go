@@ -52,7 +52,8 @@ func fixOverlayExStyle(win application.Window) {
 // 恢复后该偏移卡死——内容整体上移、窗口下方留黑、标题栏拖拽命中错位（可拖区随内容
 // 一起上移）。此状态下 scrollTop/scrollTo 均读为 0 / 无效（overflow:hidden 视口），
 // 唯一验证有效的复位是 scrollIntoView 把根滚回顶部。
-// 立即执行一次 + 150ms 后补一次：偏移可能发生在 Apply 返回之后。
+// 前端已在 Apply 前.blur() 移除焦点（useSettings.ts），从源头避免该滚动；此处兜底
+// 立即执行一次 + 150ms 后补一次，覆盖偏移晚于 Apply 返回的时序。
 // 非 Windows 平台无此问题（见 overlay_other.go 占位）。
 func resetMainWindowScroll() {
 	if mainWindow == nil {

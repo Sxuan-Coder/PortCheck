@@ -1,9 +1,16 @@
 // Coding Plan 供应商元数据与用量展示工具。
-// provider 枚举值与后端 codingplan.go 的常量一一对应（zhipu/kimi/minimax/zenmux/deepseek）。
+// provider 枚举值与后端 codingplan.go 的常量一一对应
+// （zhipu/kimi/minimax/zenmux/deepseek/opencode）。
 
 export interface ProviderRegion {
   value: string // 存入 CodingPlanAccount.baseUrl
   label: string
+}
+
+export interface ProviderEndpoint {
+  value: string // 存入 CodingPlanAccount.endpoint（openai / responses / anthropic）
+  label: string
+  url: string // 存入 CodingPlanAccount.baseUrl
 }
 
 export interface ProviderMeta {
@@ -12,6 +19,7 @@ export interface ProviderMeta {
   color: string // 头像 / 强调色
   keyHint: string // 表单占位提示
   regions?: ProviderRegion[] // zhipu / minimax 的国内/国际站选择
+  endpoints?: ProviderEndpoint[] // opencode：OpenAI / Responses / Anthropic 三种接入端点
   needURL?: boolean // zenmux 需要用户填写完整查询端点
   urlHint?: string
   isBalance?: boolean // deepseek 余额型：卡片展示余额而非配额百分比，支持预警值
@@ -52,6 +60,17 @@ export const PROVIDERS: Record<string, ProviderMeta> = {
     needURL: true,
     urlHint: '完整的用量查询端点 URL（https://…）',
   },
+  opencode: {
+    label: 'OpenCode Go',
+    short: 'OC',
+    color: '#f97316',
+    keyHint: 'OpenCode Go API Key（opencode.ai/console）',
+    endpoints: [
+      { value: 'openai', label: 'OpenAI 兼容', url: 'https://opencode.ai/zen/go/v1' },
+      { value: 'responses', label: 'Responses', url: 'https://opencode.ai/zen/go/v1' },
+      { value: 'anthropic', label: 'Anthropic 兼容', url: 'https://opencode.ai/zen/go' },
+    ],
+  },
   deepseek: {
     label: 'DeepSeek',
     short: 'D',
@@ -74,6 +93,17 @@ export function providerMeta(provider: string): ProviderMeta {
 
 export function defaultRegion(provider: string): string {
   return providerMeta(provider).regions?.[0]?.value ?? ''
+}
+
+export function defaultEndpoint(provider: string): string {
+  return providerMeta(provider).endpoints?.[0]?.value ?? ''
+}
+
+// endpointURL 返回所选接入端点的 URL；未配置端点时回退 baseUrl。
+export function endpointURL(provider: string, endpoint: string, baseUrl = ''): string {
+  const list = providerMeta(provider).endpoints
+  if (!list) return baseUrl
+  return list.find((e) => e.value === endpoint)?.url ?? list[0]?.url ?? baseUrl
 }
 
 // 用量分级阈值与 cc-switch 一致：<70% 正常、70-89% 偏高、≥90% 告警。

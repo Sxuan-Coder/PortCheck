@@ -57,15 +57,16 @@ type StartupOpResult struct {
 // CodingPlanAccount 描述一条 Coding Plan 用量监控账号的配置。
 type CodingPlanAccount struct {
 	ID          string  `json:"id"`
-	Name        string  `json:"name"`      // 显示名，留空时由前端回退为供应商名
-	Provider    string  `json:"provider"`  // zhipu / kimi / minimax / zenmux / deepseek
-	BaseURL     string  `json:"baseUrl"`   // zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站
+	Name        string  `json:"name"`     // 显示名，留空时由前端回退为供应商名
+	Provider    string  `json:"provider"` // zhipu / kimi / minimax / zenmux / deepseek / opencode
+	BaseURL     string  `json:"baseUrl"`  // zenmux 必填（完整查询端点）；zhipu/minimax 用于区分国内/国际站；opencode 记录所选接入端点
+	Endpoint    string  `json:"endpoint"` // opencode 接入协议：openai / responses / anthropic（仅记录用户选择）
 	APIKey      string  `json:"apiKey"`
 	AlertAmount float64 `json:"alertAmount"` // 余额预警阈值（元），0 = 不提醒；仅余额型供应商（deepseek）使用
 	CreatedAt   int64   `json:"createdAt"`
 }
 
-// CodingPlanQuota 描述一个用量窗口（5 小时 / 周）的百分比与重置时间。
+// CodingPlanQuota 描述一个用量窗口（5 小时 / 周 / 月）的百分比与重置时间。
 type CodingPlanQuota struct {
 	UsedPercent float64 `json:"usedPercent"` // 已用百分比（0-100 基准；超界不裁剪，展示策略交给前端）
 	ResetsAt    string  `json:"resetsAt"`    // 重置时间 ISO 8601，空表示未知
@@ -83,13 +84,14 @@ type CodingPlanBalance struct {
 
 // CodingPlanUsage 是单账号一次用量查询的结果；失败不返回 Go 错误，
 // 而是 Status=expired/error + Error 带原因，便于前端按卡片展示失败态。
-// 配额型供应商填 FiveHour/Weekly，余额型供应商填 Balance（互斥，nil 区分形态）。
+// 配额型供应商填 FiveHour/Weekly/Monthly，余额型供应商填 Balance（互斥，nil 区分形态）。
 type CodingPlanUsage struct {
 	AccountID string             `json:"accountId"`
 	PlanName  string             `json:"planName"` // 套餐等级（Lite/Pro/Max 等），无则空
 	Status    string             `json:"status"`   // ok / expired / error
 	FiveHour  *CodingPlanQuota   `json:"fiveHour"` // 5 小时窗口；nil 表示无该桶
 	Weekly    *CodingPlanQuota   `json:"weekly"`   // 周（7 天）窗口；nil 表示套餐无周限额
+	Monthly   *CodingPlanQuota   `json:"monthly"`  // 月窗口；nil 表示无该桶（目前仅 OpenCode Go）
 	Balance   *CodingPlanBalance `json:"balance"`  // 余额（DeepSeek）；nil 表示配额型
 	Error     string             `json:"error"`
 	QueriedAt int64              `json:"queriedAt"`

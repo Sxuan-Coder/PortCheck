@@ -1,9 +1,9 @@
 package main
 
 // Coding Plan 用量查询服务：对接 Kimi For Coding、智谱 GLM（国内/国际）、
-// MiniMax（国内/国际）、ZenMux 四家配额型供应商的用量接口，统一抽象为
-// 「5 小时窗口 + 周窗口」两个配额桶（已用百分比 + 重置时间）；另接入
-// DeepSeek 余额型供应商（账户余额 + 预警值）。
+// MiniMax（国内/国际）、ZenMux、OpenCode Go 配额型供应商的用量接口，统一抽象为
+// 「5 小时窗口 + 周窗口 + 月窗口」（OpenCode Go 才有月窗口）配额桶
+// （已用百分比 + 重置时间）；另接入 DeepSeek 余额型供应商（账户余额 + 预警值）。
 // 接口语义与解析逻辑对齐 cc-switch 的 Rust 实现，并保留其踩坑修复：
 //   - 智谱 TOKENS_LIMIT 按 unit 字段分桶（unit=3 五小时 / unit=6 周），不能按
 //     nextResetTime 排序分桶：周期末尾周桶会比 5h 桶更早重置（cc-switch #3036）。
@@ -32,7 +32,19 @@ const (
 	codingPlanMiniMax  = "minimax"
 	codingPlanZenMux   = "zenmux"
 	codingPlanDeepseek = "deepseek"
+	codingPlanOpenCode = "opencode"
 )
+
+// OpenCode Go 支持的接入协议（仅用于记录用户选择的端点，用量查询固定走 /zen/go/v1/usage）。
+const (
+	openCodeEndpointOpenAI    = "openai"
+	openCodeEndpointResponses = "responses"
+	openCodeEndpointAnthropic = "anthropic"
+)
+
+// openCodeUsageURL 是 OpenCode Go 官方用量接口：Bearer API Key，
+// 返回 usage.rolling/weekly/monthly 的 percent（0-100）与 resetsAt（ISO 8601）。
+const openCodeUsageURL = "https://opencode.ai/zen/go/v1/usage"
 
 // 查询结果状态。
 const (
@@ -85,6 +97,7 @@ var codingPlanProviders = map[string]codingPlanProvider{
 		return quotaUsage(q5, q7, name), err
 	}},
 	codingPlanDeepseek: {label: "DeepSeek", query: queryDeepSeekAccountUsage},
+	codingPlanOpenCode: {label: "OpenCode Go", query: queryOpenCodeAccountUsage},
 }
 
 // ── 配置持久化：%APPDATA%/PortCheck/codingplans.json ─────────────
@@ -155,6 +168,7 @@ func (s *CodingPlanService) SaveCodingPlan(account CodingPlanAccount) (CodingPla
 	}
 	account.APIKey = strings.TrimSpace(account.APIKey)
 	account.BaseURL = strings.TrimSpace(account.BaseURL)
+	account.Endpoint = strings.ToLower(strings.TrimSpace(account.Endpoint))
 	account.Name = strings.TrimSpace(account.Name)
 	if account.Name == "" {
 		account.Name = provider.label
@@ -167,9 +181,19 @@ func (s *CodingPlanService) SaveCodingPlan(account CodingPlanAccount) (CodingPla
 			return account, errors.New("ZenMux 需要完整的 https:// 查询端点 URL")
 		}
 	}
-	// 预警值仅对余额型供应商有意义，其余供应商归零避免残留脏数据。
+	if account.Provider == codingPlanOpenCode {
+		switch account.Endpoint {
+		case "", openCodeEndpointOpenAI, openCodeEndpointResponses, openCodeEndpointAnthropic:
+		default:
+			return account, fmt.Errorf("不支持的接入端点：%s", account.Endpoint)
+		}
+	}
+	// 预警值仅对余额型供应商有意义；接入端点仅 OpenCode 使用，其余归零避免残留脏数据。
 	if account.Provider != codingPlanDeepseek {
 		account.AlertAmount = 0
+	}
+	if account.Provider != codingPlanOpenCode {
+		account.Endpoint = ""
 	}
 
 	codingPlanMu.Lock()
@@ -268,6 +292,7 @@ func queryCodingPlanQuota(account CodingPlanAccount) CodingPlanUsage {
 	usage.Status = codingPlanStatusOK
 	usage.FiveHour = result.FiveHour
 	usage.Weekly = result.Weekly
+	usage.Monthly = result.Monthly
 	usage.Balance = result.Balance
 	usage.PlanName = result.PlanName
 	return usage
@@ -702,4 +727,52 @@ func parseDeepSeekBalance(body map[string]any) *CodingPlanBalance {
 	b.Granted, _ = jNum(picked, "granted_balance")
 	b.ToppedUp, _ = jNum(picked, "topped_up_balance")
 	return b
+}
+
+// ── OpenCode Go ───────────────────────────────────────────────
+
+// queryOpenCodeAccountUsage 查询 OpenCode Go 用量：
+// GET https://opencode.ai/zen/go/v1/usage（Bearer）。接口返回账户级
+// rolling（5 小时）/ weekly / monthly 三个窗口，percent 已是 0-100 的已用百分比，
+// resetsAt 为 ISO 时间；401=密钥无效、403=未订阅 Go，由 codingPlanGet 统一归类。
+func queryOpenCodeAccountUsage(account CodingPlanAccount) (CodingPlanUsage, error) {
+	body, err := codingPlanGet(openCodeUsageURL, map[string]string{
+		"Authorization":      "Bearer " + account.APIKey,
+		"Accept":             "application/json",
+		"x-opencode-session": "portcheck-usage", // 稳定 workload id，供网关识别非对话请求
+	})
+	if err != nil {
+		return CodingPlanUsage{}, err
+	}
+	return parseOpenCodeUsage(body)
+}
+
+// parseOpenCodeUsage 把 { usage: { rolling, weekly, monthly } } 归一为三个配额桶。
+// percent 缺失或非数字的窗口视为无该桶；三个窗口都缺失时报解析错误。
+func parseOpenCodeUsage(body map[string]any) (CodingPlanUsage, error) {
+	usage := jObj(body, "usage")
+	if usage == nil {
+		return CodingPlanUsage{}, errors.New("响应缺少 usage 字段")
+	}
+	result := CodingPlanUsage{
+		FiveHour: parseOpenCodePeriod(jObj(usage, "rolling")),
+		Weekly:   parseOpenCodePeriod(jObj(usage, "weekly")),
+		Monthly:  parseOpenCodePeriod(jObj(usage, "monthly")),
+	}
+	if result.FiveHour == nil && result.Weekly == nil && result.Monthly == nil {
+		return CodingPlanUsage{}, errors.New("响应缺少用量窗口")
+	}
+	return result, nil
+}
+
+// parseOpenCodePeriod 解析单个窗口；percent 为服务端计算的 0-100 整数。
+func parseOpenCodePeriod(m map[string]any) *CodingPlanQuota {
+	if m == nil {
+		return nil
+	}
+	pct, ok := jNum(m, "percent")
+	if !ok {
+		return nil
+	}
+	return &CodingPlanQuota{UsedPercent: pct, ResetsAt: jStr(m, "resetsAt")}
 }
